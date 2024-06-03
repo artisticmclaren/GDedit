@@ -35,6 +35,7 @@ int initializeTextures() {
         tex.setSmooth(true);
         textures[i]=tex;
     }
+
     texLoaded=true;
     return 0;
 }

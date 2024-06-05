@@ -23,43 +23,55 @@ struct completeButton {
 
 class Button {
     public:
-        // variables
+        // button variables
         int x;
         int y;
         float width;
         float height;
-        std::string title;
 
-        Button(int x, int y,float width, float height,std::string title) {
+        // text variables
+        std::string title;
+        int textSize;
+
+        Button(int x, int y,float width, float height,std::string title, int textSize) {
             this->x=x;
             this->y=y;
             this->width=width;
             this->height=height;
             this->title=title;
-        }
-
-        // functions
-        bool isTouching(sf::Vector2i pos) {
-            int _x=pos.x;
-            int _y=pos.y;
-
-            if (_x < x+width && _x > x && _y < y+height && _y > y) {
-                return true;
-            }
-            return false;
+            this->textSize = textSize;
         }
 
         sf::Sprite drawButton() {
             sf::Sprite output;
             output.setTexture(ui_textures[0]);
             output.setPosition(x,y);
+            output.setOrigin(sf::Vector2f(ui_textures[0].getSize().x/2,ui_textures[0].getSize().y/2));
             output.setScale(sf::Vector2f(width,height));
             return output;
         }
         
         sf::Text drawText() {
             sf::Text output;
+            output.setFont(uifnt);
+            output.setCharacterSize(textSize);
+            output.setFillColor(sf::Color::White);
+            output.setString(title);
+
+            sf::FloatRect textRect;
+            textRect = output.getLocalBounds();
+            output.setOrigin(textRect.left+textRect.width/2,textRect.top+textRect.height/2);
+            output.setPosition(x,y);
             return output;
+        }
+
+        bool isMouseInside(sf::Vector2i mousePosition) {
+            sf::FloatRect bounds = drawButton().getGlobalBounds();
+
+            if (bounds.contains(mousePosition.x,mousePosition.y)) {
+                return true;
+            }
+            return false;
         }
 
         completeButton draw() {
@@ -86,6 +98,9 @@ class Canvas {
 
         sf::Sprite draw() {
             sf::Sprite output;
+            sf::Texture tex;
+            tex.loadFromFile("assets/ui/ui_bg.png");
+            output.setTexture(tex);
             output.setPosition(x,y);
             output.setScale(sf::Vector2f(width,height));
             return output;

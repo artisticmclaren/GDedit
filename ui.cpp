@@ -86,10 +86,10 @@ class Canvas {
     public:
         int x;
         int y;
-        int width;
-        int height;
+        float width;
+        float height;
 
-        Canvas(int x, int y, int width, int height) {
+        Canvas(int x, int y, float width, float height) {
             this->x = x;
             this->y = y;
             this->width = width;

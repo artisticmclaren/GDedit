@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <filesystem>
 
 #include "textures.cpp"
 #include "ui.cpp"
@@ -29,6 +30,8 @@ struct block
 };
 
 bool paused = false;
+
+
 int objectCount = 0;
 
 sf::Vector2i roundPositions(sf::Vector2i pos)
@@ -59,10 +62,17 @@ sf::Vector2i roundPositions(sf::Vector2i pos)
     return output;
 }
 
+std::string reason; // latest reason for function failure
+
 bool saveLevel(std::string levelName, block blocks[80000])
 {
     std::ofstream save(std::string("saves/").append(levelName));
     std::string data = "";
+
+	if (std::filesystem::is_directory(std::string("saves"))==false) {
+		reason=std::string("directory 'saves' does not exist.");
+		return false;
+	}
 
     for (int b = 0; b < 80000; b++)
     {
@@ -92,6 +102,8 @@ void placeObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, int no
     mpcp.y = mousePosition.y - cameraPosition.y;
 
     sf::Vector2i rounded = roundPositions(mpcp);
+    if (mpcp.x<0) rounded.x-=30;
+    if (mpcp.y<0) rounded.y-=30;
     blocks[objectCount].id = nobjid;
     blocks[objectCount].x = rounded.x;
     blocks[objectCount].y = rounded.y;
@@ -121,6 +133,9 @@ int main()
     }
 
     sf::Sprite bg;
+    sf::RectangleShape line;
+    line.setSize(sf::Vector2f(5,1280));
+    line.setPosition(0,0);
 
     // define pause ui
     Button Resume(640,50+150,1,0.25,"Resume",18);
@@ -129,6 +144,7 @@ int main()
     Button Quit(640,350+150,1,0.25,"Quit",18);
 
     Canvas pauseBG(0, 0, 5, 5);
+    Canvas browseBG(15,15,4.9,2.675);
 
     sf::Vector2i cameraPosition;
     sf::Vector2i mousePosition;
@@ -216,6 +232,7 @@ int main()
         }
 
         window.clear(sf::Color(40, 125, 255, 255));
+        line.setPosition(cameraPosition.x,0);
 
         sf::FloatRect visibleArea(
             0 - 30,
@@ -314,7 +331,43 @@ int main()
             }
         }
 
+		if (reason!=std::string("")) {
+			Canvas error(1280/2-(256*3/2), 720/2-(256*2/2),3,2);
+			sf::Text warning;
+			warning.setFont(roboto);
+			warning.setCharacterSize(36);
+			warning.setFillColor(sf::Color::Red);
+			warning.setString(std::string("ERROR:"));
+			sf::FloatRect bounds = warning.getLocalBounds();
+			warning.setOrigin(bounds.left+bounds.width/2,bounds.top+bounds.height/2);
+			warning.setPosition(1280/2,150);
+
+			sf::Text msg;
+			msg.setFont(roboto);
+			msg.setCharacterSize(18);
+			msg.setFillColor(sf::Color::White);
+			msg.setString(reason);
+			sf::FloatRect msgBounds = msg.getLocalBounds();
+			msg.setOrigin(msgBounds.left+msgBounds.width/2,msgBounds.top+msgBounds.height/2);
+			msg.setPosition(1280/2,720/2);
+
+			Button btn(1280/2,(720/2)+225,1,0.2,std::string("OK"),18);
+
+			window.draw(error.draw());
+			window.draw(warning);
+			window.draw(msg);
+			window.draw(btn.drawButton());
+			window.draw(btn.drawText());
+			
+			if (clicked) {
+				if (btn.isMouseInside(mousePosition)) {
+					reason=std::string("");
+				}
+			}
+		}
+
         clicked=false;
+        window.draw(line);
 
         window.display();
         rendered = 0;

@@ -95,6 +95,27 @@ bool saveLevel(std::string levelName, block blocks[80000])
     return true;
 }
 
+int totalPlaced=0;
+
+void deleteObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, block blocks[80000]) {
+    sf::Vector2i mpcp;
+    mpcp.x = mousePosition.x - cameraPosition.x;
+    mpcp.y = mousePosition.y - cameraPosition.y;
+
+    sf::Vector2i rounded = roundPositions(mpcp);
+    if (mpcp.x<0) rounded.x-=30;
+    if (mpcp.y<0) rounded.y-=30;
+
+    for (int b = 0; b<totalPlaced; b++) {
+        if (blocks[b].x == rounded.x && blocks[b].y == rounded.y) {
+            blocks[b].id=0;
+            blocks[b].x=0;
+            blocks[b].y=0;
+            objectCount--;
+        }
+    }
+}
+
 void placeObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, int nobjid, block blocks[80000])
 {
     sf::Vector2i mpcp;
@@ -104,10 +125,11 @@ void placeObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, int no
     sf::Vector2i rounded = roundPositions(mpcp);
     if (mpcp.x<0) rounded.x-=30;
     if (mpcp.y<0) rounded.y-=30;
-    blocks[objectCount].id = nobjid;
-    blocks[objectCount].x = rounded.x;
-    blocks[objectCount].y = rounded.y;
+    blocks[totalPlaced].id = nobjid;
+    blocks[totalPlaced].x = rounded.x;
+    blocks[totalPlaced].y = rounded.y;
     objectCount++;
+    totalPlaced++;
 }
 
 bool clicked;
@@ -159,6 +181,11 @@ int main()
     sf::RectangleShape line;
     line.setSize(sf::Vector2f(5,1280));
     line.setPosition(0,0);
+
+    sf::RectangleShape abyss;
+    abyss.setSize(sf::Vector2f(1280,720));
+    abyss.setPosition(0,720);
+    abyss.setFillColor(sf::Color(0,0,0));
 
     // define pause ui
     Button Resume(640,50+150,1,0.25,"Resume",18);
@@ -243,6 +270,9 @@ int main()
                 {
                     nobjid--;
                 }
+                if (event.key.code == sf::Keyboard::Key::Delete || event.key.code == sf::Keyboard::Key::Backspace) {
+                    deleteObject(mousePosition,cameraPosition,blocks);
+                }
             }
         }
 
@@ -253,7 +283,7 @@ int main()
             cameraPosition.y = cpOnClick.y + (cmp.y - oldmp.y);
         }
 
-        window.clear(sf::Color(40, 105, 235, 235));
+        window.clear(sf::Color(40,105,235,235));
         line.setPosition(cameraPosition.x,0);
 
         sf::FloatRect visibleArea(
@@ -286,6 +316,9 @@ int main()
             groundlc-=1;
         }
 
+        abyss.setPosition(0,946+cameraPosition.y);
+        abyss.setScale(720,1280+cameraPosition.y);
+        window.draw(abyss);
         ground.setPosition(0+(512*groundlc)+cameraPosition.x,690+cameraPosition.y);
         ground2.setPosition(512+(512*groundlc)+cameraPosition.x,690+cameraPosition.y);
         ground3.setPosition(1024+(512*groundlc)+cameraPosition.x,690+cameraPosition.y);
@@ -316,6 +349,16 @@ int main()
             sf::FloatRect titleRect = title.getLocalBounds();
             title.setOrigin(titleRect.left+titleRect.width/2,titleRect.top+titleRect.height/2);
             title.setPosition(640,80);
+
+            sf::Text objcount;
+            objcount.setCharacterSize(18);
+            objcount.setFont(roboto);
+            objcount.setFillColor(sf::Color::White);
+            sf::FloatRect objRect = objcount.getLocalBounds();
+            objcount.setOrigin(objRect.left+objRect.width/2,objRect.top+objRect.height/2);
+            objcount.setPosition(5,697);
+            objcount.setString(std::string("Objects: ").append(std::to_string(objectCount)));
+            window.draw(objcount);
 
             window.draw(title);
 

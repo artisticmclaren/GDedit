@@ -124,6 +124,30 @@ int main()
     sf::Clock fpsClock;
     initializeUI();
 
+    sf::Sprite ground;
+    sf::Sprite ground2;
+    sf::Sprite ground3;
+    sf::Sprite ground4;
+    sf::Texture groundTex;
+
+
+
+    groundTex.loadFromFile("assets/grounds/groundSquare_01_001-uhd.png");
+    ground.setTexture(groundTex);
+    ground.setPosition(0,680);
+    ground.setColor(sf::Color(40, 125, 255, 255));
+    ground2.setTexture(groundTex);
+    ground2.setPosition(512,680);
+    ground2.setColor(sf::Color(40, 125, 255, 255));
+    ground3.setTexture(groundTex);
+    ground3.setPosition(1024,680);
+    ground3.setColor(sf::Color(40, 125, 255, 255));
+    ground4.setPosition(1536,680);
+    ground4.setTexture(groundTex);
+    ground4.setColor(sf::Color(40, 125, 255, 255));
+    
+    int groundlc=0;
+
     // load all fonts
     sf::Font roboto;
     if (!roboto.loadFromFile("assets/fonts/roboto.ttf"))
@@ -132,7 +156,6 @@ int main()
         return -1;
     }
 
-    sf::Sprite bg;
     sf::RectangleShape line;
     line.setSize(sf::Vector2f(5,1280));
     line.setPosition(0,0);
@@ -143,8 +166,7 @@ int main()
     Button SaveAndQuit(640,250+150,1,0.25,"Save and Quit",18);
     Button Quit(640,350+150,1,0.25,"Quit",18);
 
-    Canvas pauseBG(0, 0, 5, 5);
-    Canvas browseBG(15,15,4.9,2.675);
+    Canvas pauseBG(0, 0, 5, 5,200);
 
     sf::Vector2i cameraPosition;
     sf::Vector2i mousePosition;
@@ -231,7 +253,7 @@ int main()
             cameraPosition.y = cpOnClick.y + (cmp.y - oldmp.y);
         }
 
-        window.clear(sf::Color(40, 125, 255, 255));
+        window.clear(sf::Color(40, 105, 235, 235));
         line.setPosition(cameraPosition.x,0);
 
         sf::FloatRect visibleArea(
@@ -257,32 +279,29 @@ int main()
             rendered++;
         }
 
+        if ((0+(512*groundlc)+cameraPosition.x)+512<0) {
+            groundlc+=1;
+        }
+        if ((1536+(512*groundlc)+cameraPosition.x)-512>720) {
+            groundlc-=1;
+        }
+
+        ground.setPosition(0+(512*groundlc)+cameraPosition.x,690+cameraPosition.y);
+        ground2.setPosition(512+(512*groundlc)+cameraPosition.x,690+cameraPosition.y);
+        ground3.setPosition(1024+(512*groundlc)+cameraPosition.x,690+cameraPosition.y);
+        ground4.setPosition(1024+512+(512*groundlc)+cameraPosition.x,690+cameraPosition.y);
+        window.draw(ground);
+        window.draw(ground2);
+        window.draw(ground3);
+        window.draw(ground4);
+
         float fps = 1 / fpsClock.getElapsedTime().asSeconds();
-
-        sf::Text tbf;
-        tbf.setCharacterSize(18);
-        tbf.setFillColor(sf::Color::White);
-        tbf.setFont(roboto);
-        tbf.setString(std::string("fps: ").append(std::to_string((int)fps)));
-        window.draw(tbf);
-
-        sf::Text rText;
-        rText.setCharacterSize(18);
-        rText.setString(std::string("rendered: ").append(std::to_string(rendered)));
-        rText.setFont(roboto);
-        rText.setPosition(0, 20);
-        window.draw(rText);
-
-        sf::Text mpos;
-        mpos.setCharacterSize(18);
-        mpos.setString(std::string("nobjid: ").append(std::to_string(nobjid)));
-        mpos.setFont(roboto);
-        mpos.setPosition(0, 40);
-        window.draw(mpos);
 
         fpsClock.restart().asSeconds();
 
         mousePosition = sf::Mouse::getPosition(window);
+
+        window.draw(line);
 
         if (paused)
         {
@@ -332,7 +351,7 @@ int main()
         }
 
 		if (reason!=std::string("")) {
-			Canvas error(1280/2-(256*3/2), 720/2-(256*2/2),3,2);
+			Canvas error(1280/2-(256*3/2), 720/2-(256*2/2),3,2,200);
 			sf::Text warning;
 			warning.setFont(roboto);
 			warning.setCharacterSize(36);
@@ -367,7 +386,27 @@ int main()
 		}
 
         clicked=false;
-        window.draw(line);
+
+        sf::Text tbf;
+        tbf.setCharacterSize(18);
+        tbf.setFillColor(sf::Color::White);
+        tbf.setFont(roboto);
+        tbf.setString(std::string("fps: ").append(std::to_string((int)fps)));
+        window.draw(tbf);
+
+        sf::Text rText;
+        rText.setCharacterSize(18);
+        rText.setString(std::string("rendered: ").append(std::to_string(rendered)));
+        rText.setFont(roboto);
+        rText.setPosition(0, 20);
+        window.draw(rText);
+
+        sf::Text mpos;
+        mpos.setCharacterSize(18);
+        mpos.setString(std::string("nobjid: ").append(std::to_string(nobjid)));
+        mpos.setFont(roboto);
+        mpos.setPosition(0, 40);
+        window.draw(mpos);
 
         window.display();
         rendered = 0;

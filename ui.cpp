@@ -88,20 +88,21 @@ class Canvas {
         int y;
         float width;
         float height;
+        int alpha;
 
-        Canvas(int x, int y, float width, float height) {
+        Canvas(int x, int y, float width, float height, int alpha) {
             this->x = x;
             this->y = y;
             this->width = width;
             this->height = height;
+            this->alpha = alpha;
         }
 
         sf::Sprite draw() {
             sf::Sprite output;
-            sf::Texture tex;
-            tex.loadFromFile("assets/ui/ui_bg.png");
-            output.setTexture(tex);
+            output.setTexture(ui_textures[0]);
             output.setPosition(x,y);
+            output.setColor(sf::Color(255,255,255,alpha));
             output.setScale(sf::Vector2f(width,height));
             return output;
         }

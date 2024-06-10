@@ -10,4 +10,5 @@ cp -r ./include ./distro/win
 cp -r ./lib ./distro/win
 echo "Windows successful."
 
-./distro/linux/GDedit-linux # run on linux
+cd ./distro/linux
+./GDedit-linux # run on linux

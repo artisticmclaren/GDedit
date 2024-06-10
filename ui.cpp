@@ -33,6 +33,15 @@ class Button {
         std::string title;
         int textSize;
 
+        Button() {
+            this->x=0;
+            this->y=0;
+            this->width=0;
+            this->height=0;
+            this->title="";
+            this->textSize=0;
+        }
+
         Button(int x, int y,float width, float height,std::string title, int textSize) {
             this->x=x;
             this->y=y;

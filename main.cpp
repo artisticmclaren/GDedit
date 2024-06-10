@@ -30,7 +30,7 @@ struct block
 };
 
 bool paused = false;
-
+bool exploring = false;
 
 int objectCount = 0;
 
@@ -67,7 +67,7 @@ std::string reason; // latest reason for function failure
 bool saveLevel(std::string levelName, block blocks[80000])
 {
     std::ofstream save(std::string("saves/").append(levelName));
-    std::string data = "";
+    std::string l_data = "";
 
 	if (std::filesystem::is_directory(std::string("saves"))==false) {
 		reason=std::string("directory 'saves' does not exist.");
@@ -79,11 +79,12 @@ bool saveLevel(std::string levelName, block blocks[80000])
         if (blocks[b].id > 0)
         {
             std::string all = "";
-            std::string id = std::string(":").append(std::to_string(blocks[b].id));
+            int r_id = obj_data[blocks[b].id].id;
+            std::string id = std::string(":").append(std::to_string(r_id));
             std::string x = std::string(";").append(std::to_string(blocks[b].x));
             std::string y = std::string(";").append(std::to_string(blocks[b].y));
             all.append(id).append(x).append(y);
-            data.append(all);
+            l_data.append(all);
         }
         else
         {
@@ -91,7 +92,7 @@ bool saveLevel(std::string levelName, block blocks[80000])
         }
     }
 
-    save << data;
+    save << l_data;
     return true;
 }
 
@@ -133,9 +134,11 @@ void placeObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, int no
 }
 
 bool clicked;
+bool loading=false;
 
 int main()
 {
+
     sf::RenderWindow window(sf::VideoMode(1280, 720), "GDedit");
 
     auto icon = sf::Image();
@@ -194,6 +197,7 @@ int main()
     Button Quit(640,350+150,1,0.25,"Quit",18);
 
     Canvas pauseBG(0, 0, 5, 5,200);
+    Canvas exploreBG(1280/2-(256*4)/2,10,4,2.75,200);
 
     sf::Vector2i cameraPosition;
     sf::Vector2i mousePosition;
@@ -215,7 +219,6 @@ int main()
     }
 
     int rendered = 0;
-
     initializeTextures();
 
     while (window.isOpen())
@@ -231,16 +234,18 @@ int main()
             {
                 if (event.mouseButton.button == sf::Mouse::Button::Right)
                 {
-                    oldmp = sf::Mouse::getPosition();
-                    cpOnClick = cameraPosition;
-                    dragging = true;
+                    if (!paused && !exploring) {
+                        oldmp = sf::Mouse::getPosition();
+                        cpOnClick = cameraPosition;
+                        dragging = true;
+                    }
                 }
 
                 if (event.mouseButton.button == sf::Mouse::Button::Left)
                 {
                     clicked=true;
 
-                    if (!paused)
+                    if (!paused && !exploring)
                     {
                         placeObject(mousePosition, cameraPosition, nobjid, blocks);
                     }
@@ -260,6 +265,9 @@ int main()
                 if (event.key.code == sf::Keyboard::Key::S)
                 {
                     saveLevel("test", blocks);
+                }
+                if (event.key.code==sf::Keyboard::Key::O) {
+                    exploring=!exploring;
                 }
 
                 if (event.key.code == sf::Keyboard::Key::Up)
@@ -335,6 +343,65 @@ int main()
         mousePosition = sf::Mouse::getPosition(window);
 
         window.draw(line);
+
+        if (exploring) {
+            window.draw(exploreBG.draw());
+
+            sf::Text label;
+            label.setCharacterSize(24);
+            label.setFont(roboto);
+            label.setFillColor(sf::Color::White);
+            label.setString("Objects");
+            sf::FloatRect labelRect = label.getLocalBounds();
+            label.setOrigin(labelRect.left+labelRect.width/2,labelRect.top+labelRect.height/2);
+            label.setPosition((int)640,(int)25);
+            window.draw(label);
+            Button expBtn[169];
+
+            int x=0;
+            int y=0;
+
+            for (int i=0; i<169; i++) {
+                //          ↓ took me ages to find this number
+                Button btn(149+(35*x),55+(35*y),0.1172,0.1172,std::string(""),0);
+                sf::Sprite obj;
+                obj.setTexture(textures[i]);
+                sf::Vector2u texSize = textures[i].getSize();
+                float sfx=0;
+                float sfy=0;
+                if (texSize.x == texSize.y) {
+                    sfx = 30.0f/texSize.x;
+                    sfy = 30.0f/texSize.y;
+                } else {
+                    sfy = 30.0f/texSize.y;
+                    sfx=sfy;
+                }
+                obj.setScale(sfx,sfy);
+                obj.setPosition((149+(35*x))-15,(55+(35*y))-15);
+                int r_id = obj_data[i].id;
+                btn.title=std::to_string(r_id);
+                completeButton cbtn = btn.draw();
+                cbtn.sprite.setColor(sf::Color(255,255,255,0));
+                window.draw(cbtn.sprite);
+                expBtn[i]=btn;
+                window.draw(obj);
+                if (x==28) {
+                    x=0;
+                    y++;
+                } else {
+                    x++;
+                }
+            }
+
+            if (clicked) {
+                for (int i=0; i<169; i++) {
+                    if (expBtn[i].isMouseInside(mousePosition)) {
+                        nobjid=i;
+                    }
+                }
+            }
+
+        }
 
         if (paused)
         {
@@ -446,7 +513,7 @@ int main()
 
         sf::Text mpos;
         mpos.setCharacterSize(18);
-        mpos.setString(std::string("nobjid: ").append(std::to_string(nobjid)));
+        mpos.setString(std::string("tex list id: ").append(std::to_string(nobjid)));
         mpos.setFont(roboto);
         mpos.setPosition(0, 40);
         window.draw(mpos);

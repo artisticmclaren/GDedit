@@ -4,37 +4,40 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <filesystem>
 
 bool texLoaded=false;
 
-bool fileExists(std::string path) {
-    std::ifstream file;
-    file.open(path);
-    if (file) {return true; }
-    return false;
-}
+struct objData {
+    int id;
+    sf::Texture tex;
+};
 
+objData obj_data[169];
+
+bool compareById(const objData &a, const objData &b) { return a.id < b.id; }
+
+int texCount=169;
 sf::Texture textures[169];
 
 int initializeTextures() {
-    for (int i=0; i<169; i++) {
+    std::filesystem::path pcwd = std::filesystem::current_path();
+    std::filesystem::path ids = pcwd / "assets/ids";
+    std::string cwd(pcwd.u8string());
+    int i=0;
+    for (const auto file : std::filesystem::directory_iterator(ids)) {
+        std::string filename = file.path().filename().u8string();
+        int len = filename.length();
+        int id = std::stoi(filename.erase(len-4));
+
         sf::Texture tex;
-        std::string path="assets/ids/";
-        std::string ext = ".png";
-        path.append(std::to_string(i));
-        path.append(ext);
-
-        if (!fileExists(path)) {
-            i++;
-            continue;
-        }
-
-        if (!tex.loadFromFile(path)) {
-            tex.loadFromFile("assets/tnotfound.png");
-        }
-        tex.setSmooth(true);
-        textures[i]=tex;
+        tex.loadFromFile(file.path().u8string());
+        obj_data[i].id = id;
+        obj_data[i].tex = tex;
+        i++;
     }
+    std::sort(obj_data,obj_data+169,compareById);
+    for (int i=0; i<169; i++) { textures[i] = obj_data[i].tex; }
 
     texLoaded=true;
     return 0;

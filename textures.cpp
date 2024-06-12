@@ -7,20 +7,21 @@
 #include <filesystem>
 
 bool texLoaded=false;
+bool startLoad=false;
 
 struct objData {
     int id;
     sf::Texture tex;
 };
 
-objData obj_data[169];
-
 bool compareById(const objData &a, const objData &b) { return a.id < b.id; }
 
-int texCount=169;
-sf::Texture textures[169];
+const int texCount=169;
+sf::Texture textures[texCount];
+objData obj_data[texCount];
 
 int initializeTextures() {
+    startLoad=true;
     std::filesystem::path pcwd = std::filesystem::current_path();
     std::filesystem::path ids = pcwd / "assets/ids";
     std::string cwd(pcwd.u8string());
@@ -36,8 +37,8 @@ int initializeTextures() {
         obj_data[i].tex = tex;
         i++;
     }
-    std::sort(obj_data,obj_data+169,compareById);
-    for (int i=0; i<169; i++) { textures[i] = obj_data[i].tex; }
+    std::sort(obj_data,obj_data+texCount,compareById);
+    for (int i=0; i<texCount; i++) { textures[i] = obj_data[i].tex; }
 
     texLoaded=true;
     return 0;

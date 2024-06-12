@@ -11,12 +11,29 @@
 
 using namespace std;
 
-sf::Sprite getSprite(int id, int x, int y, float z)
+sf::Transformable setOriginAndReadjust(sf::Transformable object, const sf::Vector2f &newOrigin)
+{
+        auto offset = newOrigin - object.getOrigin();
+        object.setOrigin(newOrigin);
+        object.move(offset);
+        return object;
+}
+
+sf::Sprite getSprite(int id, int x, int y, float rot, float z)
 {
     sf::Sprite output;
+    output.rotate(rot);
     output.setTexture(textures[id]);
     output.setPosition(sf::Vector2f(x, y));
     output.setScale(sf::Vector2f(0.6 * z, 0.6 * z));
+    sf::Transformable transform;
+    transform.setPosition(output.getPosition());
+    transform.setOrigin(output.getOrigin());
+    transform.setScale(output.getScale());
+    sf::Transformable newTransform = setOriginAndReadjust(transform,sf::Vector2f(textures[id].getSize().x/2,textures[id].getSize().y/2));
+    output.setPosition(newTransform.getPosition());
+    output.setOrigin(newTransform.getOrigin());
+
     return output;
 }
 
@@ -27,6 +44,7 @@ struct block
     int x;
     int y;
     int id;
+    float rotation;
 };
 
 bool paused = false;
@@ -83,7 +101,8 @@ bool saveLevel(std::string levelName, block blocks[80000])
             std::string id = std::string(":").append(std::to_string(r_id));
             std::string x = std::string(";").append(std::to_string(blocks[b].x));
             std::string y = std::string(";").append(std::to_string(blocks[b].y));
-            all.append(id).append(x).append(y);
+            std::string r = std::string(";").append(std::to_string(blocks[b].rotation));
+            all.append(id).append(x).append(y).append(r);
             l_data.append(all);
         }
         else
@@ -112,12 +131,13 @@ void deleteObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, block
             blocks[b].id=0;
             blocks[b].x=0;
             blocks[b].y=0;
+            blocks[b].rotation=0;
             objectCount--;
         }
     }
 }
 
-void placeObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, int nobjid, block blocks[80000])
+void placeObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, int nobjid, float rotation, block blocks[80000])
 {
     sf::Vector2i mpcp;
     mpcp.x = mousePosition.x - cameraPosition.x;
@@ -129,6 +149,7 @@ void placeObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, int no
     blocks[totalPlaced].id = nobjid;
     blocks[totalPlaced].x = rounded.x;
     blocks[totalPlaced].y = rounded.y;
+    blocks[totalPlaced].rotation=rotation;
     objectCount++;
     totalPlaced++;
 }
@@ -147,15 +168,16 @@ int main()
 
     // clocks
     sf::Clock fpsClock;
+
+    // init
     initializeUI();
+    initializeTextures();
 
     sf::Sprite ground;
     sf::Sprite ground2;
     sf::Sprite ground3;
     sf::Sprite ground4;
     sf::Texture groundTex;
-
-
 
     groundTex.loadFromFile("assets/grounds/groundSquare_01_001-uhd.png");
     ground.setTexture(groundTex);
@@ -207,7 +229,16 @@ int main()
     sf::Vector2i cpOnClick;
     bool dragging = false;
     float zoom = 1;
+    float rotation=0;
     int nobjid = 1;
+
+
+    sf::Sprite preview;
+    preview.setTexture(textures[nobjid]);
+    preview.setScale(0.6,0.6);
+    preview.setOrigin(textures[nobjid].getSize().x/2,textures[nobjid].getSize().y/2);
+    preview.setPosition(1280-30,30);
+    preview.setRotation(rotation);
 
     block blocks[80000];
 
@@ -216,10 +247,10 @@ int main()
         blocks[b].id = 0;
         blocks[b].x = 0;
         blocks[b].y = 0;
+        blocks[b].rotation=0;
     }
 
     int rendered = 0;
-    initializeTextures();
 
     while (window.isOpen())
     {
@@ -229,6 +260,12 @@ int main()
             if (event.type == sf::Event::Closed)
             {
                 window.close();
+            }
+            if (event.type == sf::Event::Resized)
+            {
+                // breaks some stuff but at least it doesnt stretch everything anymore
+                sf::FloatRect visibleArea(0, 0, event.size.width, event.size.height);
+                window.setView(sf::View(visibleArea));
             }
             if (event.type == sf::Event::MouseButtonPressed)
             {
@@ -247,11 +284,10 @@ int main()
 
                     if (!paused && !exploring)
                     {
-                        placeObject(mousePosition, cameraPosition, nobjid, blocks);
+                        placeObject(mousePosition, cameraPosition, nobjid,rotation, blocks);
                     }
                 }
             }
-
             if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Button::Right)
             {
                 dragging = false;
@@ -266,17 +302,16 @@ int main()
                 {
                     saveLevel("test", blocks);
                 }
+                if (event.key.code==sf::Keyboard::Key::Q) {
+                    rotation-=90;
+                    preview.setRotation(rotation);
+                }
+                if (event.key.code==sf::Keyboard::Key::E) {
+                    rotation+=90;
+                    preview.setRotation(rotation);
+                }
                 if (event.key.code==sf::Keyboard::Key::O) {
                     exploring=!exploring;
-                }
-
-                if (event.key.code == sf::Keyboard::Key::Up)
-                {
-                    nobjid++;
-                }
-                if (event.key.code == sf::Keyboard::Key::Down)
-                {
-                    nobjid--;
                 }
                 if (event.key.code == sf::Keyboard::Key::Delete || event.key.code == sf::Keyboard::Key::Backspace) {
                     deleteObject(mousePosition,cameraPosition,blocks);
@@ -292,6 +327,7 @@ int main()
         }
 
         window.clear(sf::Color(40,105,235,235));
+        window.draw(preview);
         line.setPosition(cameraPosition.x,0);
 
         sf::FloatRect visibleArea(
@@ -313,7 +349,7 @@ int main()
                 continue;
             }
 
-            window.draw(getSprite(blocks[b].id, blocks[b].x + cameraPosition.x, blocks[b].y + cameraPosition.y, zoom));
+            window.draw(getSprite(blocks[b].id, blocks[b].x + cameraPosition.x, blocks[b].y + cameraPosition.y, blocks[b].rotation, zoom));
             rendered++;
         }
 
@@ -356,12 +392,12 @@ int main()
             label.setOrigin(labelRect.left+labelRect.width/2,labelRect.top+labelRect.height/2);
             label.setPosition((int)640,(int)25);
             window.draw(label);
-            Button expBtn[169];
+            Button expBtn[texCount];
 
             int x=0;
             int y=0;
 
-            for (int i=0; i<169; i++) {
+            for (int i=1; i<texCount; i++) {
                 //          ↓ took me ages to find this number
                 Button btn(149+(35*x),55+(35*y),0.1172,0.1172,std::string(""),0);
                 sf::Sprite obj;
@@ -394,9 +430,10 @@ int main()
             }
 
             if (clicked) {
-                for (int i=0; i<169; i++) {
+                for (int i=0; i<texCount; i++) {
                     if (expBtn[i].isMouseInside(mousePosition)) {
                         nobjid=i;
+                        preview.setTexture(textures[nobjid]);
                     }
                 }
             }
@@ -517,6 +554,13 @@ int main()
         mpos.setFont(roboto);
         mpos.setPosition(0, 40);
         window.draw(mpos);
+
+        sf::Text rot;
+        rot.setCharacterSize(18);
+        rot.setString(std::string("rot: ").append(std::to_string(rotation)));
+        rot.setFont(roboto);
+        rot.setPosition(0,60);
+        window.draw(rot);
 
         window.display();
         rendered = 0;

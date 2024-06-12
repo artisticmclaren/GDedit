@@ -19,13 +19,14 @@ sf::Transformable setOriginAndReadjust(sf::Transformable object, const sf::Vecto
         return object;
 }
 
-sf::Sprite getSprite(int id, int x, int y, float rot, float z)
+sf::Sprite getSprite(int id, int x, int y, float rot, float z, bool isBeingEdited)
 {
     sf::Sprite output;
     output.rotate(rot);
     output.setTexture(textures[id]);
     output.setPosition(sf::Vector2f(x, y));
     output.setScale(sf::Vector2f(0.6 * z, 0.6 * z));
+    if (isBeingEdited) { output.setColor(sf::Color::Green); }
     sf::Transformable transform;
     transform.setPosition(output.getPosition());
     transform.setOrigin(output.getOrigin());
@@ -115,6 +116,19 @@ bool saveLevel(std::string levelName, block blocks[80000])
     return true;
 }
 
+int count_occurences(std::string input,char f) {
+  int count = 0;
+
+  for (int i = 0; i < input.size(); i++)
+    if (input[i] == f) count++;
+
+  return count;
+}
+
+bool LoadSave(std::string levelName,block blocks[80000]) {
+    return true;
+}
+
 int totalPlaced=0;
 
 void deleteObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, block blocks[80000]) {
@@ -152,6 +166,26 @@ void placeObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, int no
     blocks[totalPlaced].rotation=rotation;
     objectCount++;
     totalPlaced++;
+}
+
+int editSelected=-1;
+
+void editObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, block blocks[80000]) {
+    sf::Vector2i mpcp;
+    mpcp.x = mousePosition.x - cameraPosition.x;
+    mpcp.y = mousePosition.y - cameraPosition.y;
+
+    sf::Vector2i rounded = roundPositions(mpcp);
+    if (mpcp.x<0) rounded.x-=30;
+    if (mpcp.y<0) rounded.y-=30;
+
+
+    for (int b = 0; b<80000; b++) {
+        if (blocks[b].id==0) {continue;}
+        if (rounded.x==blocks[b].x && rounded.y==blocks[b].y) {
+            editSelected=b;
+        }
+    }
 }
 
 bool clicked;
@@ -214,9 +248,16 @@ int main()
 
     // define pause ui
     Button Resume(640,50+150,1,0.25,"Resume",18);
-    Button SaveLevelBtn(640, 150+150, 1, 0.25, "Save", 18);
-    Button SaveAndQuit(640,250+150,1,0.25,"Save and Quit",18);
-    Button Quit(640,350+150,1,0.25,"Quit",18);
+    Button Load(640,150+150,1,0.25,"Load",18);
+    Button SaveLevelBtn(640, 250+150, 1, 0.25, "Save", 18);
+    Button SaveAndQuit(640,350+150,1,0.25,"Save and Quit",18);
+    Button Quit(640,450+150,1,0.25,"Quit",18);
+
+    // other
+    Button objectM(90+20,720-42,0.7,0.25,"Object",18);
+    Button edit(90+20+189,720-42,0.7,0.25,"Edit",18);
+
+    int mode = 0; // 0: object mode, 1: edit mode
 
     Canvas pauseBG(0, 0, 5, 5,200);
     Canvas exploreBG(1280/2-(256*4)/2,10,4,2.75,200);
@@ -281,10 +322,24 @@ int main()
                 if (event.mouseButton.button == sf::Mouse::Button::Left)
                 {
                     clicked=true;
-
-                    if (!paused && !exploring)
+                    
+                    if (objectM.isMouseInside(mousePosition)) {
+                        mode=0;
+                    } else if (edit.isMouseInside(mousePosition)) {
+                        mode=1;
+                    }
+                    
+                    if (!paused && !exploring && !objectM.isMouseInside(mousePosition) && !edit.isMouseInside(mousePosition))
                     {
-                        placeObject(mousePosition, cameraPosition, nobjid,rotation, blocks);
+                        if (mode==0) {
+                            placeObject(mousePosition, cameraPosition, nobjid,rotation, blocks);
+                        } else if (mode==1) {
+                            if (editSelected==-1) {
+                                editObject(mousePosition,cameraPosition,blocks);
+                            } else if (editSelected>-1) {
+                                editSelected=-1;
+                            }
+                        }
                     }
                 }
             }
@@ -327,6 +382,17 @@ int main()
         }
 
         window.clear(sf::Color(40,105,235,235));
+
+        if (editSelected>-1 && mode==1) {
+            sf::Vector2i mpcp = sf::Vector2i(mousePosition.x-cameraPosition.x,mousePosition.y-cameraPosition.y);
+            sf::Vector2i rounded = roundPositions(mpcp);
+            if (mpcp.x<0) rounded.x-=30;
+            if (mpcp.y<0) rounded.y-=30;
+
+            blocks[editSelected].x = rounded.x;
+            blocks[editSelected].y = rounded.y;
+        }
+
         window.draw(preview);
         line.setPosition(cameraPosition.x,0);
 
@@ -349,7 +415,13 @@ int main()
                 continue;
             }
 
-            window.draw(getSprite(blocks[b].id, blocks[b].x + cameraPosition.x, blocks[b].y + cameraPosition.y, blocks[b].rotation, zoom));
+            bool edited;
+            if (blocks[b].id==editSelected) {
+                edited=true;
+            } else {
+                edited=false;
+            }
+            window.draw(getSprite(blocks[b].id, blocks[b].x + cameraPosition.x, blocks[b].y + cameraPosition.y, blocks[b].rotation, zoom,edited));
             rendered++;
         }
 
@@ -440,6 +512,14 @@ int main()
 
         }
 
+        // menu
+        completeButton ec = edit.draw();
+        window.draw(ec.sprite);
+        window.draw(ec.label);
+        completeButton oc = objectM.draw();
+        window.draw(oc.sprite);
+        window.draw(oc.label);
+
         if (paused)
         {
             window.draw(pauseBG.draw());
@@ -469,6 +549,9 @@ int main()
             completeButton rc = Resume.draw();
             window.draw(rc.sprite);
             window.draw(rc.label);
+            completeButton lc = Load.draw();
+            window.draw(lc.sprite);
+            window.draw(lc.label);
             completeButton saq = SaveAndQuit.draw();
             window.draw(saq.sprite);
             window.draw(saq.label);            
@@ -483,6 +566,9 @@ int main()
             if (clicked) {
                 if (Resume.isMouseInside(mousePosition)) {
                     paused=false;
+                }
+                if (Load.isMouseInside(mousePosition)) {
+                    LoadSave("test",blocks);
                 }
                 if (SaveAndQuit.isMouseInside(mousePosition)) {
                     saveLevel("test",blocks);
@@ -557,10 +643,18 @@ int main()
 
         sf::Text rot;
         rot.setCharacterSize(18);
-        rot.setString(std::string("rot: ").append(std::to_string(rotation)));
+        rot.setString(std::string("mode: ").append(std::to_string(mode)));
         rot.setFont(roboto);
         rot.setPosition(0,60);
         window.draw(rot);
+
+        if (mode==1) { 
+            edit.textSize=24;
+            objectM.textSize=18; 
+        } else if (mode==0) {
+            edit.textSize=18;
+            objectM.textSize=24;
+        }
 
         window.display();
         rendered = 0;

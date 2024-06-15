@@ -20,15 +20,6 @@ const int texCount=169;
 sf::Texture textures[texCount];
 objData obj_data[texCount];
 
-int getTextureID(int r_id) {
-    for (int i=0; i< texCount; i++) {
-        if (obj_data[i].id = r_id) {
-            return i;
-        }
-    }
-    return -1;
-}
-
 int initializeTextures() {
     startLoad=true;
     std::filesystem::path pcwd = std::filesystem::current_path();

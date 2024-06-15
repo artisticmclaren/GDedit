@@ -103,7 +103,9 @@ int cLayer=0;
 bool saveLevel(std::string levelName, block blocks[80000])
 {
     std::ofstream save(std::string("saves/").append(levelName));
+    std::ofstream save_gd(std::string("saves/").append(levelName).append(".gd"));
     std::string l_data = "";
+    std::string ld_gd = "";
 
 	if (std::filesystem::is_directory(std::string("saves"))==false) {
 		reason=std::string("directory 'saves' does not exist.");
@@ -116,15 +118,23 @@ bool saveLevel(std::string levelName, block blocks[80000])
         if (blocks[b].id > 0)
         {
             std::string all = "";
+            std::string gd_all = "";
+
             int r_id = obj_data[blocks[b].id].id;
-            std::string id = std::to_string(r_id).append("\n");
+            std::string id = std::to_string(blocks[b].id).append("\n");
             std::string x = std::to_string(blocks[b].x).append("\n");
             std::string y = std::to_string(blocks[b].y).append("\n");
             std::string r = std::to_string(blocks[b].rotation).append("\n");
             std::string l =std::to_string(blocks[b].layer);
+
+            std::string gd_id = std::to_string(r_id).append("\n");
+
             all.append(id).append(x).append(y).append(r).append(l);
+            gd_all.append(gd_id).append(x).append(y).append(r).append(l);
+            gd_all.append(std::string("\nnew\n"));
             all.append(std::string("\nnew\n"));
             l_data.append(all);
+            ld_gd.append(gd_all);
         }
         else
         {
@@ -133,6 +143,7 @@ bool saveLevel(std::string levelName, block blocks[80000])
     }
 
     save << l_data;
+    save_gd << ld_gd;
     return true;
 }
 
@@ -159,6 +170,15 @@ bool LoadSave(std::string levelName,block blocks[80000]) {
     std::stringstream ss(saveString);
     std::string line;
     objectCount=0;
+    for (int b=0;b<totalPlaced;b++) {
+        blocks[b].id=0;
+        blocks[b].x=0;
+        blocks[b].y=0;
+        blocks[b].layer=0;
+        blocks[b].rotation=0;
+    }
+
+    totalPlaced=0;
 
     int c=1;
     int total=0;
@@ -509,7 +529,7 @@ int main()
             window.getSize().x + 30,
             window.getSize().y + 30);
 
-        for (int b = 0; b < 80000; b++)
+        for (int b = 0; b < totalPlaced; b++)
         {
             sf::Vector2f objectPosition(blocks[b].x + cameraPosition.x, blocks[b].y + cameraPosition.y);
 

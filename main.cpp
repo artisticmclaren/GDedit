@@ -11,6 +11,18 @@
 
 using namespace std;
 
+std::string debugText="";
+int d_msg=0;
+
+void LogDebug(std::string msg) {
+    if (d_msg==32) {
+        d_msg=0;
+        debugText=std::string("");
+    }
+    debugText.append(msg.append("\n"));
+    d_msg++;
+}
+
 sf::Transformable setOriginAndReadjust(sf::Transformable object, const sf::Vector2f &newOrigin)
 {
         auto offset = newOrigin - object.getOrigin();
@@ -25,7 +37,10 @@ sf::Sprite getSprite(int id, int x, int y, float rot, float z, bool isBeingEdite
     output.rotate(rot);
     output.setTexture(textures[id]);
     output.setPosition(sf::Vector2f(x, y));
-    output.setScale(sf::Vector2f(0.6 * z, 0.6 * z));
+    sf::Vector2u texSize = textures[id].getSize();
+    float scalex=0.6;
+    float scaley=0.6;
+    output.setScale(sf::Vector2f(scalex * z, scaley * z));
     if (isBeingEdited) { output.setColor(sf::Color::Green); }
     sf::Transformable transform;
     transform.setPosition(output.getPosition());
@@ -38,18 +53,18 @@ sf::Sprite getSprite(int id, int x, int y, float rot, float z, bool isBeingEdite
     return output;
 }
 
-bool stopHold = false;
-
 struct block
 {
     int x;
     int y;
     int id;
+    int layer;
     float rotation;
 };
 
 bool paused = false;
 bool exploring = false;
+bool debug=false;
 
 int objectCount = 0;
 
@@ -83,6 +98,8 @@ sf::Vector2i roundPositions(sf::Vector2i pos)
 
 std::string reason; // latest reason for function failure
 
+int cLayer=0;
+
 bool saveLevel(std::string levelName, block blocks[80000])
 {
     std::ofstream save(std::string("saves/").append(levelName));
@@ -90,6 +107,7 @@ bool saveLevel(std::string levelName, block blocks[80000])
 
 	if (std::filesystem::is_directory(std::string("saves"))==false) {
 		reason=std::string("directory 'saves' does not exist.");
+        LogDebug("[ERROR] Directory 'saves' does not exist.");
 		return false;
 	}
 
@@ -99,11 +117,13 @@ bool saveLevel(std::string levelName, block blocks[80000])
         {
             std::string all = "";
             int r_id = obj_data[blocks[b].id].id;
-            std::string id = std::string(":").append(std::to_string(r_id));
-            std::string x = std::string(";").append(std::to_string(blocks[b].x));
-            std::string y = std::string(";").append(std::to_string(blocks[b].y));
-            std::string r = std::string(";").append(std::to_string(blocks[b].rotation));
-            all.append(id).append(x).append(y).append(r);
+            std::string id = std::to_string(r_id).append("\n");
+            std::string x = std::to_string(blocks[b].x).append("\n");
+            std::string y = std::to_string(blocks[b].y).append("\n");
+            std::string r = std::to_string(blocks[b].rotation).append("\n");
+            std::string l =std::to_string(blocks[b].layer);
+            all.append(id).append(x).append(y).append(r).append(l);
+            all.append(std::string("\nnew\n"));
             l_data.append(all);
         }
         else
@@ -125,11 +145,61 @@ int count_occurences(std::string input,char f) {
   return count;
 }
 
+int totalPlaced=0;
+
 bool LoadSave(std::string levelName,block blocks[80000]) {
+    std::filesystem::path pcwd = std::filesystem::current_path();
+    std::string saveFile(pcwd.u8string());
+    saveFile.append("/saves/").append(levelName);
+    ifstream save(saveFile);
+    std::stringstream buf;
+    buf << save.rdbuf();
+    std::string saveString = buf.str();
+    std::vector<std::string> lines;
+    std::stringstream ss(saveString);
+    std::string line;
+    objectCount=0;
+
+    int c=1;
+    int total=0;
+    block nb;
+
+    while (std::getline(ss,line,'\n')) {
+        lines.push_back(line);
+        if (line=="") {
+            continue;
+        }
+        switch (c) {
+            case 1:
+                nb.id = stoi(line);
+                break;
+            case 2:
+                nb.x = stoi(line);
+                break;
+            case 3:
+                nb.y = stoi(line);
+                break;
+            case 4:
+                nb.rotation = stof(line);
+                break;
+            case 5:
+                nb.layer = stoi(line);
+                break;
+            case 6:
+                c=0;
+                std::cout << "id " << nb.id << " x " << nb.x << " y " << nb.y << " rot " << nb.rotation << " lay " << nb.layer << std::endl;
+                blocks[total] = nb;
+                total++;
+                objectCount++;
+                totalPlaced++;
+        }
+
+        c++;
+    }
+
+    save.close();
     return true;
 }
-
-int totalPlaced=0;
 
 void deleteObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, block blocks[80000]) {
     sf::Vector2i mpcp;
@@ -151,7 +221,7 @@ void deleteObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, block
     }
 }
 
-void placeObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, int nobjid, float rotation, block blocks[80000])
+void placeObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, int nobjid, float rotation, int layer, block blocks[80000])
 {
     sf::Vector2i mpcp;
     mpcp.x = mousePosition.x - cameraPosition.x;
@@ -164,11 +234,30 @@ void placeObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, int no
     blocks[totalPlaced].x = rounded.x;
     blocks[totalPlaced].y = rounded.y;
     blocks[totalPlaced].rotation=rotation;
+    blocks[totalPlaced].layer=layer;
     objectCount++;
     totalPlaced++;
 }
 
 int editSelected=-1;
+
+int pickObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, block blocks[80000]) {
+    sf::Vector2i mpcp;
+    mpcp.x = mousePosition.x - cameraPosition.x;
+    mpcp.y = mousePosition.y - cameraPosition.y;
+
+    sf::Vector2i rounded = roundPositions(mpcp);
+    if (mpcp.x<0) rounded.x-=30;
+    if (mpcp.y<0) rounded.y-=30;
+
+    for (int b=0;b<totalPlaced;b++) {
+        if (blocks[b].id==0) {continue;}
+        if (rounded.x==blocks[b].x && rounded.y==blocks[b].y) {
+            return blocks[b].id;
+        }
+    }
+    return -1;
+}
 
 void editObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, block blocks[80000]) {
     sf::Vector2i mpcp;
@@ -180,13 +269,14 @@ void editObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, block b
     if (mpcp.y<0) rounded.y-=30;
 
 
-    for (int b = 0; b<80000; b++) {
+    for (int b = 0; b<totalPlaced; b++) {
         if (blocks[b].id==0) {continue;}
         if (rounded.x==blocks[b].x && rounded.y==blocks[b].y) {
             editSelected=b;
         }
     }
 }
+
 
 bool clicked;
 bool loading=false;
@@ -275,6 +365,7 @@ int main()
 
 
     sf::Sprite preview;
+    
     preview.setTexture(textures[nobjid]);
     preview.setScale(0.6,0.6);
     preview.setOrigin(textures[nobjid].getSize().x/2,textures[nobjid].getSize().y/2);
@@ -289,6 +380,7 @@ int main()
         blocks[b].x = 0;
         blocks[b].y = 0;
         blocks[b].rotation=0;
+        blocks[b].layer=0;
     }
 
     int rendered = 0;
@@ -319,6 +411,14 @@ int main()
                     }
                 }
 
+                if (event.mouseButton.button == sf::Mouse::Button::Middle) {
+                    int nid = pickObject(mousePosition,cameraPosition,blocks);
+                    if (nid>0) {
+                        nobjid=nid;
+                        preview.setTexture(textures[nobjid]);
+                    }
+                }
+
                 if (event.mouseButton.button == sf::Mouse::Button::Left)
                 {
                     clicked=true;
@@ -332,13 +432,14 @@ int main()
                     if (!paused && !exploring && !objectM.isMouseInside(mousePosition) && !edit.isMouseInside(mousePosition))
                     {
                         if (mode==0) {
-                            placeObject(mousePosition, cameraPosition, nobjid,rotation, blocks);
+                            placeObject(mousePosition, cameraPosition, nobjid,rotation, cLayer, blocks);
                         } else if (mode==1) {
                             if (editSelected==-1) {
                                 editObject(mousePosition,cameraPosition,blocks);
                             } else if (editSelected>-1) {
                                 editSelected=-1;
                             }
+
                         }
                     }
                 }
@@ -370,6 +471,12 @@ int main()
                 }
                 if (event.key.code == sf::Keyboard::Key::Delete || event.key.code == sf::Keyboard::Key::Backspace) {
                     deleteObject(mousePosition,cameraPosition,blocks);
+                }
+                if (event.key.code==sf::Keyboard::Key::Num1) {
+                    mode=0;
+                }
+                if (event.key.code==sf::Keyboard::Key::Num2) {
+                    mode=1;
                 }
             }
         }
@@ -406,17 +513,10 @@ int main()
         {
             sf::Vector2f objectPosition(blocks[b].x + cameraPosition.x, blocks[b].y + cameraPosition.y);
 
-            if (blocks[b].id == 0)
-            {
-                continue;
-            }
-            if (!visibleArea.contains(objectPosition))
-            {
-                continue;
-            }
+            if (blocks[b].id == 0 || !visibleArea.contains(objectPosition) || blocks[b].layer!=cLayer) { continue; }
 
             bool edited;
-            if (blocks[b].id==editSelected) {
+            if (b==editSelected) {
                 edited=true;
             } else {
                 edited=false;
@@ -435,10 +535,10 @@ int main()
         abyss.setPosition(0,946+cameraPosition.y);
         abyss.setScale(720,1280+cameraPosition.y);
         window.draw(abyss);
-        ground.setPosition(0+(512*groundlc)+cameraPosition.x,690+cameraPosition.y);
-        ground2.setPosition(512+(512*groundlc)+cameraPosition.x,690+cameraPosition.y);
-        ground3.setPosition(1024+(512*groundlc)+cameraPosition.x,690+cameraPosition.y);
-        ground4.setPosition(1024+512+(512*groundlc)+cameraPosition.x,690+cameraPosition.y);
+        ground.setPosition(0+(512*groundlc)+cameraPosition.x,670+cameraPosition.y);
+        ground2.setPosition(512+(512*groundlc)+cameraPosition.x,670+cameraPosition.y);
+        ground3.setPosition(1024+(512*groundlc)+cameraPosition.x,670+cameraPosition.y);
+        ground4.setPosition(1024+512+(512*groundlc)+cameraPosition.x,670+cameraPosition.y);
         window.draw(ground);
         window.draw(ground2);
         window.draw(ground3);
@@ -509,7 +609,6 @@ int main()
                     }
                 }
             }
-
         }
 
         // menu
@@ -563,7 +662,7 @@ int main()
             window.draw(qc.label);
 
             // check for button click
-            if (clicked) {
+            if (clicked && reason==std::string("")) {
                 if (Resume.isMouseInside(mousePosition)) {
                     paused=false;
                 }
@@ -654,6 +753,15 @@ int main()
         } else if (mode==0) {
             edit.textSize=18;
             objectM.textSize=24;
+        }
+
+        if (debug==true) {
+            sf::Text d_text;
+            d_text.setCharacterSize(20);
+            d_text.setFont(roboto);
+            d_text.setString(debugText);
+            d_text.setPosition(0,80);
+            window.draw(d_text);
         }
 
         window.display();

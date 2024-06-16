@@ -1,0 +1,25 @@
+- garbage offset in copy paste :(
+- quater space / 8th space
+- better stretching in warp
+- swipe to place
+- context menu
+- zooming
+- undo / redo
+- better paste value system
+- copy / paste values from guide to zoom / offset
+- no scale limit (i hate you robtop)
+- an end trigger image that makes sense
+- search by update / object type in object mneu
+- not so many tabs (robtop what is wrong with you)
+- upload level directly from editor
+- zoom doesnt scroll into mouse position
+- playtesting
+- spwn integration
+- enter values into textbox (robtop please man)
+- better start position menu
+- geode integration
+- fix the stupid area triggers
+- fix robtops ui in general
+- gdshare integration
+- key bindings
+- better build helper

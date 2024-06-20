@@ -31,7 +31,7 @@ sf::Transformable setOriginAndReadjust(sf::Transformable object, const sf::Vecto
         return object;
 }
 
-sf::Sprite getSprite(int id, int x, int y, float rot, float z, bool isBeingEdited)
+sf::Sprite getSprite(int id, int x, int y, float rot, float z, bool isBeingEdited,int cLayer,int layer)
 {
     sf::Sprite output;
     output.rotate(rot);
@@ -49,6 +49,11 @@ sf::Sprite getSprite(int id, int x, int y, float rot, float z, bool isBeingEdite
     sf::Transformable newTransform = setOriginAndReadjust(transform,sf::Vector2f(textures[id].getSize().x/2,textures[id].getSize().y/2));
     output.setPosition(newTransform.getPosition());
     output.setOrigin(newTransform.getOrigin());
+    if (cLayer>-1) {
+        if (layer!=cLayer) {
+            output.setColor(sf::Color(255,255,255,100));
+        }
+    }
 
     return output;
 }
@@ -134,7 +139,7 @@ bool saveLevel(std::string levelName, block blocks[80000])
             gd_all.append(std::string("\nnew\n"));
             all.append(std::string("\nnew\n"));
             l_data.append(all);
-            ld_gd.append(gd_all);
+            ld_gd.append(gd_all);            
         }
         else
         {
@@ -232,11 +237,13 @@ void deleteObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, block
 
     for (int b = 0; b<totalPlaced; b++) {
         if (blocks[b].x == rounded.x && blocks[b].y == rounded.y) {
-            blocks[b].id=0;
-            blocks[b].x=0;
-            blocks[b].y=0;
-            blocks[b].rotation=0;
-            objectCount--;
+            if (cLayer==-1 || blocks[b].layer==cLayer) {
+                blocks[b].id=0;
+                blocks[b].x=0;
+                blocks[b].y=0;
+                blocks[b].rotation=0;
+                objectCount--;
+            }
         }
     }
 }
@@ -254,7 +261,11 @@ void placeObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, int no
     blocks[totalPlaced].x = rounded.x;
     blocks[totalPlaced].y = rounded.y;
     blocks[totalPlaced].rotation=rotation;
-    blocks[totalPlaced].layer=layer;
+    if (layer==-1) {
+        blocks[totalPlaced].layer=0;
+    } else {
+        blocks[totalPlaced].layer=layer;
+    }
     objectCount++;
     totalPlaced++;
 }
@@ -336,7 +347,7 @@ int main()
     ground4.setPosition(1536,680);
     ground4.setTexture(groundTex);
     ground4.setColor(sf::Color(40, 125, 255, 255));
-    
+
     int groundlc=0;
 
     // load all fonts
@@ -350,6 +361,7 @@ int main()
     sf::RectangleShape line;
     line.setSize(sf::Vector2f(5,1280));
     line.setPosition(0,0);
+    line.setFillColor(sf::Color(255,255,255,100));
 
     sf::RectangleShape abyss;
     abyss.setSize(sf::Vector2f(1280,720));
@@ -357,15 +369,24 @@ int main()
     abyss.setFillColor(sf::Color(0,0,0));
 
     // define pause ui
-    Button Resume(640,50+150,1,0.25,"Resume",18);
-    Button Load(640,150+150,1,0.25,"Load",18);
-    Button SaveLevelBtn(640, 250+150, 1, 0.25, "Save", 18);
-    Button SaveAndQuit(640,350+150,1,0.25,"Save and Quit",18);
-    Button Quit(640,450+150,1,0.25,"Quit",18);
+    Button Resume(640,50+150,1,0.25,255,"Resume",18);
+    Button Load(640,150+150,1,0.25,255,"Load",18);
+    Button SaveLevelBtn(640, 250+150, 1, 0.25,255,"Save", 18);
+    Button SaveAndQuit(640,350+150,1,0.25,255,"Save and Quit",18);
+    Button Quit(640,450+150,1,0.25,255,"Quit",18);
 
     // other
-    Button objectM(90+20,720-42,0.7,0.25,"Object",18);
-    Button edit(90+20+189,720-42,0.7,0.25,"Edit",18);
+    Button objectM(90+20,720-42,0.7,0.25,255,"Object",18);
+    Button edit(90+20+189,720-42,0.7,0.25,255,"Edit",18);
+    Button objectC(1280-30,30,0.17578125,0.17578125,100,"",0);
+
+    Button layerLeft(1050,650,0.25,0.25,255,"",0);
+    Button layerRight(1220,650,0.25,0.25,255,"",0);
+    sf::Text cLayerText;
+    cLayerText.setFont(roboto);
+    cLayerText.setFillColor(sf::Color::White);
+    cLayerText.setString(std::string(std::to_string(cLayer)));
+    cLayerText.setPosition(1114,650);
 
     int mode = 0; // 0: object mode, 1: edit mode
 
@@ -442,14 +463,32 @@ int main()
                 if (event.mouseButton.button == sf::Mouse::Button::Left)
                 {
                     clicked=true;
-                    
+                    bool clickedButton=false;
+
                     if (objectM.isMouseInside(mousePosition)) {
                         mode=0;
+                        clickedButton=true;
                     } else if (edit.isMouseInside(mousePosition)) {
                         mode=1;
+                        clickedButton=true;
                     }
+                    if (objectC.isMouseInside(mousePosition)) {
+                        exploring=true;
+                        clickedButton=true;
+                    }
+
+                    if (layerLeft.isMouseInside(mousePosition)) {
+                        if (cLayer>0) {
+                            cLayer--;
+                        } else {
+                            cLayer=-1;
+                        }
+
+                        clickedButton=true;
+                    }
+                    if (layerRight.isMouseInside(mousePosition)) { cLayer++; clickedButton=true; }
                     
-                    if (!paused && !exploring && !objectM.isMouseInside(mousePosition) && !edit.isMouseInside(mousePosition))
+                    if (!paused && !exploring && !clickedButton)
                     {
                         if (mode==0) {
                             placeObject(mousePosition, cameraPosition, nobjid,rotation, cLayer, blocks);
@@ -498,6 +537,14 @@ int main()
                 if (event.key.code==sf::Keyboard::Key::Num2) {
                     mode=1;
                 }
+                if (event.key.code==sf::Keyboard::Left) {
+                    if (cLayer>-1) {
+                        cLayer--;
+                    }
+                }
+                if (event.key.code==sf::Keyboard::Right) {
+                    cLayer++;
+                }
             }
         }
 
@@ -520,6 +567,7 @@ int main()
             blocks[editSelected].y = rounded.y;
         }
 
+        window.draw(objectC.drawButton());
         window.draw(preview);
         line.setPosition(cameraPosition.x,0);
 
@@ -533,7 +581,7 @@ int main()
         {
             sf::Vector2f objectPosition(blocks[b].x + cameraPosition.x, blocks[b].y + cameraPosition.y);
 
-            if (blocks[b].id == 0 || !visibleArea.contains(objectPosition) || blocks[b].layer!=cLayer) { continue; }
+            if (blocks[b].id == 0 || !visibleArea.contains(objectPosition)) { continue; }
 
             bool edited;
             if (b==editSelected) {
@@ -541,7 +589,7 @@ int main()
             } else {
                 edited=false;
             }
-            window.draw(getSprite(blocks[b].id, blocks[b].x + cameraPosition.x, blocks[b].y + cameraPosition.y, blocks[b].rotation, zoom,edited));
+            window.draw(getSprite(blocks[b].id, blocks[b].x + cameraPosition.x, blocks[b].y + cameraPosition.y, blocks[b].rotation, zoom,edited,cLayer,blocks[b].layer));
             rendered++;
         }
 
@@ -572,6 +620,39 @@ int main()
 
         window.draw(line);
 
+        // menu
+        completeButton ec = edit.draw();
+        window.draw(ec.sprite);
+        window.draw(ec.label);
+        completeButton oc = objectM.draw();
+        window.draw(oc.sprite);
+        window.draw(oc.label);
+
+        // layer controls
+        sf::Texture LLtex;
+        LLtex.loadFromFile("assets/ui/arrowLeft.png");
+        LLtex.setSmooth(true);
+        sf::Texture LRtex;
+        LRtex.loadFromFile("assets/ui/arrowRight.png");
+
+        sf::Sprite LLsprite = layerLeft.drawButton();
+        LLsprite.setTexture(LLtex);
+        sf::Sprite LRsprite = layerRight.drawButton();
+        LRsprite.setTexture(LRtex);
+
+        window.draw(LLsprite);
+        sf::FloatRect textRect;
+        textRect = cLayerText.getLocalBounds();
+        if (cLayer==-1) {
+            cLayerText.setString("ALL");
+        } else {
+            cLayerText.setString(std::to_string(cLayer));
+        }
+        cLayerText.setOrigin(textRect.left+textRect.width/2,textRect.top+textRect.height/2);
+        cLayerText.setPosition(1114+(42/2),650);
+        window.draw(cLayerText);
+        window.draw(LRsprite);
+
         if (exploring) {
             window.draw(exploreBG.draw());
 
@@ -591,7 +672,7 @@ int main()
 
             for (int i=1; i<texCount; i++) {
                 //          ↓ took me ages to find this number
-                Button btn(149+(35*x),55+(35*y),0.1172,0.1172,std::string(""),0);
+                Button btn(149+(35*x),55+(35*y),0.1172,0.1172,255,std::string(""),0);
                 sf::Sprite obj;
                 obj.setTexture(textures[i]);
                 sf::Vector2u texSize = textures[i].getSize();
@@ -621,6 +702,11 @@ int main()
                 }
             }
 
+            Button close(640,670,0.7,0.25,255,"Close",18);
+            completeButton closeDraw = close.draw();
+            window.draw(closeDraw.sprite);
+            window.draw(closeDraw.label);
+
             if (clicked) {
                 for (int i=0; i<texCount; i++) {
                     if (expBtn[i].isMouseInside(mousePosition)) {
@@ -628,16 +714,12 @@ int main()
                         preview.setTexture(textures[nobjid]);
                     }
                 }
+
+                if (close.isMouseInside(mousePosition)) {
+                    exploring=false;
+                }
             }
         }
-
-        // menu
-        completeButton ec = edit.draw();
-        window.draw(ec.sprite);
-        window.draw(ec.label);
-        completeButton oc = objectM.draw();
-        window.draw(oc.sprite);
-        window.draw(oc.label);
 
         if (paused)
         {
@@ -722,7 +804,7 @@ int main()
 			msg.setOrigin(msgBounds.left+msgBounds.width/2,msgBounds.top+msgBounds.height/2);
 			msg.setPosition(1280/2,720/2);
 
-			Button btn(1280/2,(720/2)+225,1,0.2,std::string("OK"),18);
+			Button btn(1280/2,(720/2)+225,1,0.2,255,std::string("OK"),18);
 
 			window.draw(error.draw());
 			window.draw(warning);

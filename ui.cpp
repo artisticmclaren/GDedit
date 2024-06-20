@@ -5,7 +5,7 @@
 #include <fstream>
 #include <string>
 
-sf::Texture ui_textures[1];
+sf::Texture ui_textures[2];
 sf::Font uifnt;
 
 int initializeUI() {
@@ -28,6 +28,7 @@ class Button {
         int y;
         float width;
         float height;
+        int alpha;
 
         // text variables
         std::string title;
@@ -38,16 +39,18 @@ class Button {
             this->y=0;
             this->width=0;
             this->height=0;
+            this->alpha=100;
             this->title="";
             this->textSize=0;
         }
 
-        Button(int x, int y,float width, float height,std::string title, int textSize) {
+        Button(int x, int y,float width, float height,int alpha,std::string title, int textSize) {
             this->x=x;
             this->y=y;
             this->width=width;
             this->height=height;
             this->title=title;
+            this->alpha=alpha;
             this->textSize = textSize;
         }
 
@@ -57,6 +60,7 @@ class Button {
             output.setPosition(x,y);
             output.setOrigin(sf::Vector2f(ui_textures[0].getSize().x/2,ui_textures[0].getSize().y/2));
             output.setScale(sf::Vector2f(width,height));
+            output.setColor(sf::Color(255,255,255,alpha));
             return output;
         }
         

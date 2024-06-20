@@ -1,25 +1,25 @@
-- garbage offset in copy paste :(
+X garbage offset in copy paste :(
 - quater space / 8th space
-- better stretching in warp
-- swipe to place
-- context menu
-- zooming
-- undo / redo
-- better paste value system
-- copy / paste values from guide to zoom / offset
-- no scale limit (i hate you robtop)
-- an end trigger image that makes sense
-- search by update / object type in object mneu
-- not so many tabs (robtop what is wrong with you)
-- upload level directly from editor
-- zoom doesnt scroll into mouse position
-- playtesting
-- spwn integration
-- enter values into textbox (robtop please man)
-- better start position menu
-- geode integration
-- fix the stupid area triggers
-- fix robtops ui in general
-- gdshare integration
-- key bindings
-- better build helper
+X better stretching in warp
+X swipe to place
+X context menu
+X zooming
+X undo / redo
+X better paste value system
+X copy / paste values from guide to zoom / offset
+X no scale limit (i hate you robtop)
+X an end trigger image that makes sense
+X search by update / object type in object mneu
+X not so many tabs (robtop what is wrong with you)
+X upload level directly from editor
+X zoom doesnt scroll into mouse position
+X playtesting
+X spwn integration
+X enter values into textbox (robtop please man)
+X better start position menu
+X geode integration
+X fix the stupid area triggers
+X fix robtops ui in general
+X gdshare integration
+X key bindings
+X better build helper

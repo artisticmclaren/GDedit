@@ -1,5 +1,5 @@
 X garbage offset in copy paste :(
-- quater space / 8th space
+X quater space / 8th space
 X better stretching in warp
 X swipe to place
 X context menu

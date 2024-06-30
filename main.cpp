@@ -310,7 +310,11 @@ void editObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, block b
 
 
 bool clicked;
+bool ctrlClicked=false;
+bool shiftClicked=false;
 bool loading=false;
+bool levelLoaded=false;
+std::string levelName="null";
 
 int main()
 {
@@ -333,6 +337,13 @@ int main()
     sf::Sprite ground3;
     sf::Sprite ground4;
     sf::Texture groundTex;
+
+    sf::Texture objSelectTex;
+    sf::Sprite objSelect;
+
+    objSelectTex.loadFromFile("assets/objects.png");
+    objSelect.setTexture(objSelectTex);
+    objSelect.setPosition(135,30);
 
     groundTex.loadFromFile("assets/grounds/groundSquare_01_001-uhd.png");
     ground.setTexture(groundTex);
@@ -509,6 +520,12 @@ int main()
             }
             if (event.type == sf::Event::KeyPressed)
             {
+                if (event.key.code == sf::Keyboard::Key::LControl && !ctrlClicked) {
+                  ctrlClicked=true;
+                }
+                if (event.key.code==sf::Keyboard::Key::LShift && !shiftClicked) {
+                  shiftClicked=true;
+                }
                 if (event.key.code == sf::Keyboard::Key::Escape || event.key.code == sf::Keyboard::P)
                 {
                     paused=!paused;
@@ -667,40 +684,7 @@ int main()
             window.draw(label);
             Button expBtn[texCount];
 
-            int x=0;
-            int y=0;
-
-            for (int i=1; i<texCount; i++) {
-                //          ↓ took me ages to find this number
-                Button btn(149+(35*x),55+(35*y),0.1172,0.1172,255,std::string(""),0);
-                sf::Sprite obj;
-                obj.setTexture(textures[i]);
-                sf::Vector2u texSize = textures[i].getSize();
-                float sfx=0;
-                float sfy=0;
-                if (texSize.x == texSize.y) {
-                    sfx = 30.0f/texSize.x;
-                    sfy = 30.0f/texSize.y;
-                } else {
-                    sfy = 30.0f/texSize.y;
-                    sfx=sfy;
-                }
-                obj.setScale(sfx,sfy);
-                obj.setPosition((149+(35*x))-15,(55+(35*y))-15);
-                int r_id = obj_data[i].id;
-                btn.title=std::to_string(r_id);
-                completeButton cbtn = btn.draw();
-                cbtn.sprite.setColor(sf::Color(255,255,255,0));
-                window.draw(cbtn.sprite);
-                expBtn[i]=btn;
-                window.draw(obj);
-                if (x==28) {
-                    x=0;
-                    y++;
-                } else {
-                    x++;
-                }
-            }
+            window.draw(objSelect);
 
             Button close(640,670,0.7,0.25,255,"Close",18);
             completeButton closeDraw = close.draw();
@@ -772,11 +756,11 @@ int main()
                     LoadSave("test",blocks);
                 }
                 if (SaveAndQuit.isMouseInside(mousePosition)) {
-                    saveLevel("test",blocks);
+                    saveLevel(levelName,blocks);
                     window.close();
                 }
                 if (SaveLevelBtn.isMouseInside(mousePosition)) {
-                    saveLevel("test",blocks);
+                    saveLevel(levelName,blocks);
                 }
                 if (Quit.isMouseInside(mousePosition)) {
                     window.close();

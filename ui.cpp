@@ -120,3 +120,39 @@ class Canvas {
             return output;
         }
 };
+
+class TextFeild {
+  public:
+    int x;
+    int y;
+    int width;
+    int height;
+
+    std::string currentString;
+    bool selected;
+
+    TextFeild(int x, int y,int width, int height) {
+      this->x=x;
+      this->y=y;
+      this->width=width;
+      this->height=height;
+    }
+
+    sf::Sprite draw() {
+      sf::Sprite output;
+      output.setTexture(ui_textures[0]);
+      output.setPosition(x,y);
+      output.setScale(width,height);
+      return output;
+    }
+
+    sf::Text drawInput() {
+      sf::Text output;
+      output.setString(currentString);
+      output.setPosition(x,y);
+      output.setFont(uifnt);
+      output.setFillColor(sf::Color::White);
+      output.setCharacterSize(18);
+      return output;
+    }
+};

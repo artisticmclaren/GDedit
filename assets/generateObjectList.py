@@ -8,21 +8,25 @@ im_int = []
 
 d = os.listdir("ids")
 
-ysize=0
+ysize=30
 xsize=0
 obj=0
+i=0
 
 index=""
 
-print("generating image and index...")
+print("generating image...")
 for m in d:
     if int(m.replace(".png",""))==0: continue
     images.append(f"ids/{m}")
     im_int.append(int(m.replace(".png","")))
-    if Image.open(f"ids/{m}").size[1]>ysize:
-        ysize=Image.open(f"ids/{m}").size[1]
-    xsize+=Image.open(f"ids/{m}").size[0]
+    if (i==29):
+        ysize+=35
+        i=0
+        xsize=35*6
+    xsize+=35
     obj+=1
+    i+=1
 
 im_int.sort()
 images.clear()
@@ -33,15 +37,21 @@ total=0
 
 new_im = Image.new('RGBA', (xsize,ysize))
 i=0
+xpos = 0
+ypos = 0
 for im in images:
     o=Image.open(im)
-    new_im.paste(o,(total,0))
+    if (i==29):
+        i=0
+        xpos=0
+        ypos+=35
+    sx = o.width*(30/o.width)
+    sy = o.height*(30/o.height)
+    r = o.resize((int(sx),int(sy)))
+    new_im.paste(r,(xpos,ypos))
     index+=f"{total}\n0\n{o.size[0]}\n{o.size[1]}\nnew\n"
-    total+=o.size[0]
+    xpos+=35
     i+=1
 
-new_im.save('worlds_worst_spritesheet.png')
-print(f"created spritesheet with {obj} objects.")
-f = open("spritesheet.txt","w")
-f.write(index)
-print("written to index.")
+new_im.save('objects.png')
+print(f"created sprite with {obj+1} objects.")

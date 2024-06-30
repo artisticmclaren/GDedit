@@ -23,7 +23,8 @@ for m in d:
     if (i==29):
         ysize+=35
         i=0
-    xsize==i*35
+        xsize=35*6
+    xsize+=35
     obj+=1
     i+=1
 
@@ -53,4 +54,4 @@ for im in images:
     i+=1
 
 new_im.save('objects.png')
-print(f"created sprite with {obj} objects.")
+print(f"created sprite with {obj+1} objects.")

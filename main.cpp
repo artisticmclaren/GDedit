@@ -5,6 +5,7 @@
 #include <fstream>
 #include <string>
 #include <filesystem>
+#include <cmath>
 
 #include "textures.cpp"
 #include "ui.cpp"
@@ -682,7 +683,6 @@ int main()
             label.setOrigin(labelRect.left+labelRect.width/2,labelRect.top+labelRect.height/2);
             label.setPosition((int)640,(int)25);
             window.draw(label);
-            Button expBtn[texCount];
 
             window.draw(objSelect);
 
@@ -692,10 +692,33 @@ int main()
             window.draw(closeDraw.label);
 
             if (clicked) {
-                for (int i=0; i<texCount; i++) {
-                    if (expBtn[i].isMouseInside(mousePosition)) {
-                        nobjid=i;
-                        preview.setTexture(textures[nobjid]);
+                //std::cout << "x: " << mousePosition.x << ", y: " << mousePosition.y << std::endl;
+
+                if (mousePosition.x>135 && mousePosition.x < 135+objSelectTex.getSize().x && mousePosition.y>30 && mousePosition.y < 30+objSelectTex.getSize().y) {
+                    // players mouse is within the bounds of the image
+                    int y=30;
+                    int x=0;
+                    for (int i =0; i<texCount; i++) {
+                        // generate minimum and maximum for x and y positions
+                        if (x==29) {
+                            y+=35;
+                            x=0;
+                        }
+                        int minx = 135+35*x;
+                        int maxx = minx+30;
+                        int miny = y;
+                        int maxy = y+30;
+                        x++;
+                        if (mousePosition.x>minx && mousePosition.x<maxx && mousePosition.y>miny && mousePosition.y<maxy) { // check which object players mouse is over
+                            //std::cout << i+1 << std::endl;
+                            nobjid=i+1;
+                            if (i+1!=texCount) {
+                                preview.setTexture(textures[i+1]);
+                            }
+                            break;
+                        }
+
+                        //std::cout << "minx: " << minx << " maxx: "<< maxx << " miny: " << miny << " maxy: " << maxy << " id: " << x << std::endl;
                     }
                 }
 

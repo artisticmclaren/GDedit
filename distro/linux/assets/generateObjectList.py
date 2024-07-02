@@ -13,8 +13,6 @@ xsize=0
 obj=0
 i=0
 
-index=""
-
 print("generating image...")
 for m in d:
     if int(m.replace(".png",""))==0: continue
@@ -45,11 +43,10 @@ for im in images:
         i=0
         xpos=0
         ypos+=35
-    sx = o.width*(30/o.width)
     sy = o.height*(30/o.height)
+    sx = o.width*(30/o.height)
     r = o.resize((int(sx),int(sy)))
     new_im.paste(r,(xpos,ypos))
-    index+=f"{total}\n0\n{o.size[0]}\n{o.size[1]}\nnew\n"
     xpos+=35
     i+=1
 

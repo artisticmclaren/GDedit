@@ -109,9 +109,11 @@ int cLayer=0;
 bool saveLevel(std::string levelName, block blocks[80000])
 {
     std::ofstream save(std::string("saves/").append(levelName));
-    std::ofstream save_gd(std::string("saves/").append(levelName).append(".gd"));
+    std::ofstream save_gd(std::string("saves/").append(levelName).append(".gmd"));
     std::string l_data = "";
-    std::string ld_gd = "";
+    std::string ld_gd = "<?xml version='1.0'?><plist version='1.0' gjver='2.0'><dict><k>kCEK</k><i>4</i><k>k2</k><s>";
+    ld_gd.append(levelName);
+    ld_gd.append("</s><k>k4</k><s>b'kS38,1_40_2_125_3_255_11_255_12_255_13_255_4_-1_6_1000_7_1_15_1_18_0_8_1|1_0_2_102_3_255_11_255_12_255_13_255_4_-1_6_1001_7_1_15_1_18_0_8_1|1_0_2_102_3_255_11_255_12_255_13_255_4_-1_6_1009_7_1_15_1_18_0_8_1|1_255_2_255_3_255_11_255_12_255_13_255_4_-1_6_1002_5_1_7_1_15_1_18_0_8_1|1_40_2_125_3_255_11_255_12_255_13_255_4_-1_6_1013_7_1_15_1_18_0_8_1|1_40_2_125_3_255_11_255_12_255_13_255_4_-1_6_1014_7_1_15_1_18_0_8_1|1_125_2_255_3_0_11_255_12_255_13_255_4_-1_6_1005_5_1_7_1_15_1_18_0_8_1|1_0_2_255_3_255_11_255_12_255_13_255_4_-1_6_1006_5_1_7_1_15_1_18_0_8_1|1_255_2_255_3_255_11_255_12_255_13_255_4_-1_6_1004_7_1_15_1_18_0_8_1|,kA13,0,kA15,0,kA16,0,kA14,,kA6,0,kA7,0,kA25,0,kA17,0,kA18,0,kS39,0,kA2,0,kA3,0,kA8,0,kA4,0,kA9,0,kA10,0,kA22,0,kA23,0,kA24,0,kA27,1,kA40,1,kA41,1,kA42,1,kA28,0,kA29,0,kA31,1,kA32,1,kA36,0,kA43,0,kA44,0,kA45,1,kA33,1,kA34,1,kA35,0,kA37,1,kA38,1,kA39,1,kA19,0,kA26,0,kA20,0,kA21,0,kA11,0;");
 
 	if (std::filesystem::is_directory(std::string("saves"))==false) {
 		reason=std::string("directory 'saves' does not exist.");
@@ -127,17 +129,28 @@ bool saveLevel(std::string levelName, block blocks[80000])
             std::string gd_all = "";
 
             int r_id = obj_data[blocks[b].id].id;
+            // for gdedit
             std::string id = std::to_string(blocks[b].id).append("\n");
             std::string x = std::to_string(blocks[b].x).append("\n");
             std::string y = std::to_string(blocks[b].y).append("\n");
             std::string r = std::to_string(blocks[b].rotation).append("\n");
             std::string l =std::to_string(blocks[b].layer);
 
-            std::string gd_id = std::to_string(r_id).append("\n");
+            // for gd
+            std::string gy="15";
+            std::string gid = std::to_string(r_id);
+            std::string gx = std::to_string(blocks[b].x+15);
+            if (blocks[b].y==630) {
+                gy = std::to_string(abs(blocks[b].y-(615)));
+            } else {
+                gy = std::to_string(abs(blocks[b].y-(615))+30);
+            }
+            std::string gr = std::to_string(blocks[b].rotation);
+            std::string gl =std::to_string(blocks[b].layer);
 
             all.append(id).append(x).append(y).append(r).append(l);
-            gd_all.append(gd_id).append(x).append(y).append(r).append(l);
-            gd_all.append(std::string("\nnew\n"));
+            gd_all.append("1,").append(gid).append(",2,").append(gx).append(",3,").append(gy).append(",6,").append(gr).append(",20,").append(gl).append(";");
+             
             all.append(std::string("\nnew\n"));
             l_data.append(all);
             ld_gd.append(gd_all);            
@@ -149,6 +162,7 @@ bool saveLevel(std::string levelName, block blocks[80000])
     }
 
     save << l_data;
+    ld_gd.append("</s><k>k5</k><s>GDedit</s><k>k101</k><s>0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0</s><k>k13</k><t /><k>k21</k><i>2</i><k>k16</k><i>1</i><k>k80</k><i>84</i><k>k83</k><i>611</i><k>k50</k><i>42</i><k>k47</k><t /><k>k48</k><i>4</i><k>kI1</k><r>198.2</r><k>kI2</k><r>94.5185</r><k>kI3</k><r>0.6</r><k>kI6</k><d><k>0</k><s>0</s><k>1</k><s>0</s><k>2</k><s>0</s><k>3</k><s>0</s><k>4</k><s>0</s><k>5</k><s>0</s><k>6</k><s>0</s><k>7</k><s>0</s><k>8</k><s>0</s><k>9</k><s>0</s><k>10</k><s>0</s><k>11</k><s>0</s><k>12</k><s>0</s><k>13</k><s>0</s></d></dict></plist>");
     save_gd << ld_gd;
     return true;
 }
@@ -340,7 +354,7 @@ int main()
     sf::Texture groundTex;
 
     sf::Texture objSelectTex;
-    sf::Sprite objSelect;
+    sf::Sprite objSelect;       
 
     objSelectTex.loadFromFile("assets/objects.png");
     objSelect.setTexture(objSelectTex);
@@ -710,9 +724,9 @@ int main()
                         int maxy = y+30;
                         x++;
                         if (mousePosition.x>minx && mousePosition.x<maxx && mousePosition.y>miny && mousePosition.y<maxy) { // check which object players mouse is over
-                            //std::cout << i+1 << std::endl;
-                            nobjid=i+1;
                             if (i+1!=texCount) {
+                                //std::cout << i+1 << std::endl;
+                                nobjid=i+1;
                                 preview.setTexture(textures[i+1]);
                             }
                             break;
@@ -776,7 +790,7 @@ int main()
                     paused=false;
                 }
                 if (Load.isMouseInside(mousePosition)) {
-                    LoadSave("test",blocks);
+                    LoadSave(levelName,blocks);
                 }
                 if (SaveAndQuit.isMouseInside(mousePosition)) {
                     saveLevel(levelName,blocks);

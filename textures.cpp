@@ -16,7 +16,7 @@ struct objData {
 
 bool compareById(const objData &a, const objData &b) { return a.id < b.id; }
 
-const int texCount=169;
+const int texCount=177;
 sf::Texture textures[texCount];
 objData obj_data[texCount];
 

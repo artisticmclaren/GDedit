@@ -121,38 +121,70 @@ class Canvas {
         }
 };
 
-class TextFeild {
-  public:
-    int x;
-    int y;
-    int width;
-    int height;
+class TextInput {
+    public:
+        int x;
+        int y;
+        int id;
+        int textSize;
+        float width;
+        float height;
+        std::string value;
 
-    std::string currentString;
-    bool selected;
+        TextInput() {
+            this->x = 0;
+            this->y = 0;
+            this->width = 0;
+            this->height = 0;
+            this->textSize = -1;
+            this->id=-1;
+        }
 
-    TextFeild(int x, int y,int width, int height) {
-      this->x=x;
-      this->y=y;
-      this->width=width;
-      this->height=height;
-    }
+        TextInput(int x, int y, float width,float height,int textSize,int id) {
+            this->x = x;
+            this->y = y;
+            this->width = width;
+            this->height = height;
+            this->textSize=textSize;
+        }
 
-    sf::Sprite draw() {
-      sf::Sprite output;
-      output.setTexture(ui_textures[0]);
-      output.setPosition(x,y);
-      output.setScale(width,height);
-      return output;
-    }
+        sf::Sprite draw() {
+            sf::Sprite output;
+            output.setTexture(ui_textures[0]);
+            output.setPosition(x,y);
+            output.setOrigin(sf::Vector2f(ui_textures[0].getSize().x/2,ui_textures[0].getSize().y/2));
+            output.setScale(sf::Vector2f(width,height));
+            return output;
+        }
 
-    sf::Text drawInput() {
-      sf::Text output;
-      output.setString(currentString);
-      output.setPosition(x,y);
-      output.setFont(uifnt);
-      output.setFillColor(sf::Color::White);
-      output.setCharacterSize(18);
-      return output;
-    }
+        bool isMouseInside(sf::Vector2i mousePosition) {
+            sf::FloatRect bounds = draw().getGlobalBounds();
+
+            if (bounds.contains(mousePosition.x,mousePosition.y)) {
+                return true;
+            }
+            return false;
+        }
+
+        sf::Text drawInput() {
+            sf::Text output;
+            output.setFont(uifnt);
+            output.setCharacterSize(textSize);
+            output.setFillColor(sf::Color::White);
+            output.setString(value);
+
+            sf::FloatRect textRect;
+            textRect = output.getLocalBounds();
+            output.setOrigin(textRect.left+textRect.width/2,textRect.top+textRect.height/2);
+            output.setPosition(x,y);
+            return output;
+        }
+
+        void set_default() { // set to default constructor
+            this->x = 0;
+            this->y = 0;
+            this->width = 0;
+            this->height = 0;
+            this->textSize = -1;
+        }
 };

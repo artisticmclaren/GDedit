@@ -1,0 +1,9 @@
+[16:07:14 2024-07-03] FETCHING Version 2.36.13
+[16:07:14 2024-07-03] CREATING /home/elijah/.spicetify
+[16:07:14 2024-07-03] DOWNLOADING https://github.com/spicetify/cli/releases/download/v2.36.13/spicetify-2.36.13-linux-amd64.tar.gz
+[16:07:15 2024-07-03] EXTRACTING /home/elijah/.spicetify/spicetify.tar.gz
+[16:07:15 2024-07-03] SETTING EXECUTABLE PERMISSIONS TO /home/elijah/.spicetify/spicetify
+[16:07:15 2024-07-03] REMOVING /home/elijah/.spicetify/spicetify.tar.gz
+[16:07:15 2024-07-03] APPENDING /home/elijah/.spicetify to PATH in /home/elijah/.zshrc
+[16:07:15 2024-07-03] spicetify v2.36.13 was installed successfully to /home/elijah/.spicetify
+[16:07:15 2024-07-03] Run 'spicetify --help' to get started

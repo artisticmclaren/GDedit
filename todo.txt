@@ -1,8 +1,7 @@
-X garbage offset in copy paste :(
+X fix garbage offset in copy paste
 X quater space / 8th space
 X better stretching in warp
 X swipe to place
-X context menu
 X zooming
 X undo / redo
 X better paste value system
@@ -20,6 +19,6 @@ X better start position menu
 X geode integration
 X fix the stupid area triggers
 X fix robtops ui in general
-X gdshare integration
+✓ gdshare integration
 X key bindings
 X better build helper

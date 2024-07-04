@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <algorithm>
 #include <filesystem>
 #include <cmath>
 
@@ -32,13 +33,55 @@ sf::Transformable setOriginAndReadjust(sf::Transformable object, const sf::Vecto
         return object;
 }
 
+struct color {
+    public:
+        int red;
+        int green;
+        int blue;
+        int blending;
+        float opacity;
+
+        color() {
+            this->red=255;
+            this->blue=255;
+            this->green=255;
+            this->blending=0;
+            this->opacity=1;
+        }
+
+        color(int red, int green, int blue, int blending, float opacity) {
+            this->red=red;
+            this->blue=blue;
+            this->green=green;
+            this->blending=blending;
+            this->opacity=opacity;
+        }
+};
+
+// default color init
+color BG(40,125,255,0,255);
+color G1(0,102,255,0,255);
+color LINE(255,255,255,0,255);
+color TDL(255,255,255,1,255);
+color OBJ(255,255,255,0,255);
+color G2(0,102,255,0,255);
+color BLACK(0,0,0,0,255);
+
 sf::Sprite getSprite(int id, int x, int y, float rot, float z, bool isBeingEdited,int cLayer,int layer)
 {
     sf::Sprite output;
     output.rotate(rot);
     output.setTexture(textures[id]);
-    output.setPosition(sf::Vector2f(x, y));
+    int xoffset = 0;
+    int yoffset = 0;
     sf::Vector2u texSize = textures[id].getSize();
+    if (texSize.x>50) {
+        xoffset = (texSize.x*0.6)/2;
+    }
+    if (texSize.y>50) {
+        yoffset = (texSize.y*0.6)/2;
+    }
+    output.setPosition(sf::Vector2f(x-xoffset, y-yoffset));
     float scalex=0.6;
     float scaley=0.6;
     output.setScale(sf::Vector2f(scalex * z, scaley * z));
@@ -52,20 +95,78 @@ sf::Sprite getSprite(int id, int x, int y, float rot, float z, bool isBeingEdite
     output.setOrigin(newTransform.getOrigin());
     if (cLayer>-1) {
         if (layer!=cLayer) {
-            output.setColor(sf::Color(255,255,255,100));
+            output.setColor(sf::Color(OBJ.red,OBJ.green,OBJ.blue,100));
         }
     }
 
     return output;
 }
 
+color getColor(int channelID,color colors[999]) {
+    switch (channelID)
+    {
+        case 1000:
+            return BG;
+            break;
+        case 1001:
+            return G1;
+            break;
+        case 1002:
+            return LINE;
+            break;
+        case 1003:
+            return TDL;
+            break;
+        case 1004:
+            return OBJ;
+            break;
+        case 1009:
+            return G2;
+            break;
+        case 1010:
+            return BLACK;
+            break;
+        default: // likely custom color
+            if (channelID<1000 && channelID>0) {
+                return colors[channelID-1];
+            } else {
+                return BG;
+            }
+    }
+}
+
 struct block
 {
-    int x;
-    int y;
-    int id;
-    int layer;
-    float rotation;
+    // ALL OBJECTS //
+    int id; // 1
+    int x; // 2
+    int y; // 3
+    int layer; // 20
+    float rotation; // 6
+    int mainColor = 1004; // 21
+    int secondaryColor = 1004; // 22
+    
+    // ALL TRIGGERS //
+    int touchTriggered=0;
+
+    /// COLOR TRIGGER //
+    int red=255; // 7
+    int green=255; // 8
+    int blue=255; // 9
+    float durration=0.5; // 10
+
+    void setEqual(block nb) {
+        this->id = nb.id;
+        this->x = nb.x;
+        this->y= nb.y;
+        this->layer = nb.layer;
+        this->rotation = nb.rotation;
+        this->touchTriggered = nb.touchTriggered;
+        this->red = nb.red;
+        this->green = nb.green;
+        this->blue = nb.blue;
+        this->durration = nb.durration;
+    }
 };
 
 bool paused = false;
@@ -130,10 +231,10 @@ bool saveLevel(std::string levelName, block blocks[80000])
 
             int r_id = obj_data[blocks[b].id].id;
             // for gdedit
-            std::string id = std::to_string(blocks[b].id).append("\n");
-            std::string x = std::to_string(blocks[b].x).append("\n");
-            std::string y = std::to_string(blocks[b].y).append("\n");
-            std::string r = std::to_string(blocks[b].rotation).append("\n");
+            std::string id = std::string("1 ").append(std::to_string(blocks[b].id)).append(" 2 ");
+            std::string x = std::to_string(blocks[b].x).append(" 3 ");
+            std::string y = std::to_string(blocks[b].y).append(" 6 ");
+            std::string r = std::to_string(blocks[b].rotation).append(" 20 ");
             std::string l =std::to_string(blocks[b].layer);
 
             // for gd
@@ -147,11 +248,22 @@ bool saveLevel(std::string levelName, block blocks[80000])
             }
             std::string gr = std::to_string(blocks[b].rotation);
             std::string gl =std::to_string(blocks[b].layer);
+            std::string gred = std::to_string(blocks[b].red);
+            std::string gblue = std::to_string(blocks[b].blue);
+            std::string ggreen = std::to_string(blocks[b].green);
+            std::string gdur = std::to_string(blocks[b].durration);
 
             all.append(id).append(x).append(y).append(r).append(l);
-            gd_all.append("1,").append(gid).append(",2,").append(gx).append(",3,").append(gy).append(",6,").append(gr).append(",20,").append(gl).append(";");
-             
-            all.append(std::string("\nnew\n"));
+            gd_all.append("1,").append(gid).append(",2,").append(gx).append(",3,").append(gy).append(",6,").append(gr).append(",20,").append(gl);
+            if (r_id==28 || r_id==29) {
+                gd_all.append(",7,").append(gred).append(",8,").append(ggreen).append(",9,").append(gblue).append(",10,").append(gdur);
+                all.append(std::string(" 7 ").append(gred)).append(" ");
+                all.append(std::string("8 ").append(ggreen)).append(" ");
+                all.append(std::string("9 ").append(gblue)).append(" ");
+                all.append(std::string("10 ").append(gdur)).append("");
+            }
+            gd_all.append(";");
+            all.append(std::string(" n "));
             l_data.append(all);
             ld_gd.append(gd_all);            
         }
@@ -187,10 +299,8 @@ bool LoadSave(std::string levelName,block blocks[80000]) {
     buf << save.rdbuf();
     std::string saveString = buf.str();
     std::vector<std::string> lines;
-    std::stringstream ss(saveString);
-    std::string line;
     objectCount=0;
-    for (int b=0;b<totalPlaced;b++) {
+    for (int b=0;b<totalPlaced;b++) { // clear current level (if there is anything)
         blocks[b].id=0;
         blocks[b].x=0;
         blocks[b].y=0;
@@ -200,48 +310,67 @@ bool LoadSave(std::string levelName,block blocks[80000]) {
 
     totalPlaced=0;
 
-    int c=1;
-    int total=0;
+    std::stringstream ss(saveString);
+    std::istream_iterator<std::string> begin(ss);
+    std::istream_iterator<std::string> end;
+    std::vector<std::string> data(begin,end);
+
+    int totalBlocks = 0;
     block nb;
-
-    while (std::getline(ss,line,'\n')) {
-        lines.push_back(line);
-        if (line=="") {
-            continue;
+    for (int i=0;i<data.size(); i++) { // has to be a better way of doing this
+        if (data[i]=="1") {
+            nb.id = stoi(data[i+1]);
+            i++;
+        } else if (data[i]=="2") {
+            nb.x = stoi(data[i+1]);
+            i++;
+        } else if (data[i]=="3") {
+            nb.y = stoi(data[i+1]);
+            i++;
+        } else if (data[i]=="6") {
+            nb.rotation = stof(data[i+1]);
+            i++;
+        } else if (data[i]=="20") {
+            nb.layer = stoi(data[i+1]);
+            i++;
+        } else if (data[i]=="11") {
+            nb.touchTriggered = stoi(data[i+1]);
+            i++;
+        } else if (data[i]=="7") {
+            nb.red = stoi(data[i+1]);
+            i++;
+        }else if (data[i]=="8") {
+            nb.green = stoi(data[i+1]);
+            i++;
+        }else if (data[i]=="9") {
+            nb.blue = stoi(data[i+1]);
+            i++;
+        } else if (data[i]=="10") {
+            nb.durration = stof(data[i+1]);
+            i++;
+        } else if (data[i]=="n") {
+            // std::cout << nb.id << " " << nb.x  << " " << nb.y  << " " << nb.rotation  << " " << nb.layer  << " " << nb.red  << " " << nb.green  << " " << nb.blue  << " " << nb.durration << std::endl;
+            blocks[totalBlocks].setEqual(nb);
+            totalBlocks++;
+            totalPlaced++;
         }
-        switch (c) {
-            case 1:
-                nb.id = stoi(line);
-                break;
-            case 2:
-                nb.x = stoi(line);
-                break;
-            case 3:
-                nb.y = stoi(line);
-                break;
-            case 4:
-                nb.rotation = stof(line);
-                break;
-            case 5:
-                nb.layer = stoi(line);
-                break;
-            case 6:
-                c=0;
-                std::cout << "id " << nb.id << " x " << nb.x << " y " << nb.y << " rot " << nb.rotation << " lay " << nb.layer << std::endl;
-                blocks[total] = nb;
-                total++;
-                objectCount++;
-                totalPlaced++;
-        }
-
-        c++;
     }
 
     save.close();
     return true;
 }
 
-void deleteObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, block blocks[80000]) {
+void deleteObject(block blocks[80000],int editSelected) {
+    if (editSelected==-1) { return; }
+    blocks[editSelected].id=0;
+    blocks[editSelected].x=0;
+    blocks[editSelected].y=0;
+    blocks[editSelected].rotation=0;
+    objectCount--;
+    editSelected=-1;
+}
+
+void deleteObjectWMP(block blocks[80000],sf::Vector2i mousePosition, sf::Vector2i cameraPosition) {
     sf::Vector2i mpcp;
     mpcp.x = mousePosition.x - cameraPosition.x;
     mpcp.y = mousePosition.y - cameraPosition.y;
@@ -329,7 +458,9 @@ bool ctrlClicked=false;
 bool shiftClicked=false;
 bool loading=false;
 bool levelLoaded=false;
+bool editingObject=false;
 std::string levelName="null";
+
 
 int main()
 {
@@ -354,7 +485,11 @@ int main()
     sf::Texture groundTex;
 
     sf::Texture objSelectTex;
-    sf::Sprite objSelect;       
+    sf::Sprite objSelect;
+    
+    // text input
+    std::string currInput;
+    int currInputID=-1;
 
     objSelectTex.loadFromFile("assets/objects.png");
     objSelect.setTexture(objSelectTex);
@@ -363,16 +498,17 @@ int main()
     groundTex.loadFromFile("assets/grounds/groundSquare_01_001-uhd.png");
     ground.setTexture(groundTex);
     ground.setPosition(0,680);
-    ground.setColor(sf::Color(40, 125, 255, 255));
+
+    ground.setColor(sf::Color(G1.red, G1.green, G1.blue, G1.opacity));
     ground2.setTexture(groundTex);
     ground2.setPosition(512,680);
-    ground2.setColor(sf::Color(40, 125, 255, 255));
+    ground2.setColor(sf::Color(G1.red, G1.green, G1.blue, G1.opacity));
     ground3.setTexture(groundTex);
     ground3.setPosition(1024,680);
-    ground3.setColor(sf::Color(40, 125, 255, 255));
+    ground3.setColor(sf::Color(G1.red, G1.green, G1.blue, G1.opacity));
     ground4.setPosition(1536,680);
     ground4.setTexture(groundTex);
-    ground4.setColor(sf::Color(40, 125, 255, 255));
+    ground4.setColor(sf::Color(G1.red, G1.green, G1.blue, G1.opacity));
 
     int groundlc=0;
 
@@ -404,7 +540,9 @@ int main()
     // other
     Button objectM(90+20,720-42,0.7,0.25,255,"Object",18);
     Button edit(90+20+189,720-42,0.7,0.25,255,"Edit",18);
+    Button del(90+20+(189*2),720-42,0.7,0.25,255,"Delete",18);
     Button objectC(1280-30,30,0.17578125,0.17578125,100,"",0);
+    Button editObjectBtn(1280-30,80,0.17578125,0.17578125,255,"Edit",16);
 
     Button layerLeft(1050,650,0.25,0.25,255,"",0);
     Button layerRight(1220,650,0.25,0.25,255,"",0);
@@ -440,6 +578,7 @@ int main()
     preview.setRotation(rotation);
 
     block blocks[80000];
+    color colors[999];
 
     for (int b = 0; b < 80000; b++)
     {
@@ -497,10 +636,20 @@ int main()
                     } else if (edit.isMouseInside(mousePosition)) {
                         mode=1;
                         clickedButton=true;
+                    } else if (del.isMouseInside(mousePosition)) {
+                        mode=2;
+                        clickedButton=true;
                     }
                     if (objectC.isMouseInside(mousePosition)) {
                         exploring=true;
                         clickedButton=true;
+                    }
+
+                    if (editObjectBtn.isMouseInside(mousePosition)) {
+                        if (editSelected>-1) {
+                            editingObject=true;
+                        }
+                        clickedButton=  true;
                     }
 
                     if (layerLeft.isMouseInside(mousePosition)) {
@@ -514,7 +663,7 @@ int main()
                     }
                     if (layerRight.isMouseInside(mousePosition)) { cLayer++; clickedButton=true; }
                     
-                    if (!paused && !exploring && !clickedButton)
+                    if (!paused && !exploring && !clickedButton && !editingObject)
                     {
                         if (mode==0) {
                             placeObject(mousePosition, cameraPosition, nobjid,rotation, cLayer, blocks);
@@ -524,7 +673,8 @@ int main()
                             } else if (editSelected>-1) {
                                 editSelected=-1;
                             }
-
+                        } else if (mode==2) {
+                            deleteObjectWMP(blocks,mousePosition,cameraPosition);
                         }
                     }
                 }
@@ -533,6 +683,15 @@ int main()
             {
                 dragging = false;
             }
+
+            if (currInputID>-1) {
+                if (event.type==sf::Event::TextEntered) {
+                    currInput+=event.text.unicode;
+                    std::cout << event.text.unicode << std::endl;
+                    continue;
+                }
+            }
+
             if (event.type == sf::Event::KeyPressed)
             {
                 if (event.key.code == sf::Keyboard::Key::LControl && !ctrlClicked) {
@@ -561,13 +720,16 @@ int main()
                     exploring=!exploring;
                 }
                 if (event.key.code == sf::Keyboard::Key::Delete || event.key.code == sf::Keyboard::Key::Backspace) {
-                    deleteObject(mousePosition,cameraPosition,blocks);
+                    deleteObject(blocks,editSelected);
                 }
                 if (event.key.code==sf::Keyboard::Key::Num1) {
                     mode=0;
                 }
                 if (event.key.code==sf::Keyboard::Key::Num2) {
                     mode=1;
+                }
+                if (event.key.code==sf::Keyboard::Key::Num3) {
+                    mode=2;
                 }
                 if (event.key.code==sf::Keyboard::Left) {
                     if (cLayer>-1) {
@@ -576,6 +738,26 @@ int main()
                 }
                 if (event.key.code==sf::Keyboard::Right) {
                     cLayer++;
+                }
+                if (event.key.code==sf::Keyboard::A) {
+                    if (editSelected>-1) {
+                        blocks[editSelected].x-=30;
+                    }
+                }
+                if (event.key.code==sf::Keyboard::D) {
+                    if (editSelected>-1) {
+                        blocks[editSelected].x+=30;
+                    }
+                }
+                if (event.key.code==sf::Keyboard::W) {
+                    if (editSelected>-1) {
+                        blocks[editSelected].y-=30;
+                    }
+                }
+                if (event.key.code==sf::Keyboard::S) {
+                    if (editSelected>-1) {
+                        blocks[editSelected].y+=30;
+                    }
                 }
             }
         }
@@ -587,19 +769,11 @@ int main()
             cameraPosition.y = cpOnClick.y + (cmp.y - oldmp.y);
         }
 
-        window.clear(sf::Color(40,105,235,235));
-
-        if (editSelected>-1 && mode==1) {
-            sf::Vector2i mpcp = sf::Vector2i(mousePosition.x-cameraPosition.x,mousePosition.y-cameraPosition.y);
-            sf::Vector2i rounded = roundPositions(mpcp);
-            if (mpcp.x<0) rounded.x-=30;
-            if (mpcp.y<0) rounded.y-=30;
-
-            blocks[editSelected].x = rounded.x;
-            blocks[editSelected].y = rounded.y;
-        }
+        window.clear(sf::Color(BG.red,BG.green,BG.blue,BG.opacity));
 
         window.draw(objectC.drawButton());
+        window.draw(editObjectBtn.drawButton());
+        window.draw(editObjectBtn.drawText());
         window.draw(preview);
         line.setPosition(cameraPosition.x,0);
 
@@ -659,6 +833,9 @@ int main()
         completeButton oc = objectM.draw();
         window.draw(oc.sprite);
         window.draw(oc.label);
+        completeButton dc = del.draw();
+        window.draw(dc.sprite);
+        window.draw(dc.label);
 
         // layer controls
         sf::Texture LLtex;
@@ -738,6 +915,59 @@ int main()
 
                 if (close.isMouseInside(mousePosition)) {
                     exploring=false;
+                }
+            }
+        }
+
+
+        if (editingObject) {
+            int r_id = obj_data[blocks[editSelected].id].id;
+            window.draw(exploreBG.draw());
+            int colorTriggers[5] {29,30,915,105,900};
+            int menuType=0; // 0: object 2: color trigger
+
+            std::string labelText="Edit Object";
+
+            for (int i=0;i<5;i++) {
+                if (r_id==colorTriggers[i]) {
+                    labelText=std::string("Edit Color Trigger");
+                    menuType=1;
+                }
+            }
+
+            sf::Text label;
+            label.setCharacterSize(24);
+            label.setFont(roboto);
+            label.setFillColor(sf::Color::White);
+            label.setString(labelText);
+            sf::FloatRect labelRect = label.getLocalBounds();
+            label.setOrigin(labelRect.left+labelRect.width/2,labelRect.top+labelRect.height/2);
+            label.setPosition((int)640,(int)25);
+            window.draw(label);
+
+            if (menuType==1) {
+                TextInput rgb(1280/2,720/2,1,0.25,18,1);
+                if (clicked && rgb.isMouseInside(mousePosition) && currInputID!=rgb.id) {
+                    currInputID = rgb.id;
+                    currInput = rgb.value;
+                }
+
+                window.draw(rgb.draw());
+                window.draw(rgb.drawInput());
+
+                if (currInputID>-1 && currInputID==rgb.id) {
+                    rgb.value = currInput;
+                }
+            }
+
+            Button close(640,670,0.7,0.25,255,"Close",18);
+            completeButton closeDraw = close.draw();
+            window.draw(closeDraw.sprite);
+            window.draw(closeDraw.label);
+
+            if (clicked) {
+                if (close.isMouseInside(mousePosition)) {
+                    editingObject=false;
                 }
             }
         }
@@ -872,10 +1102,16 @@ int main()
 
         if (mode==1) { 
             edit.textSize=24;
-            objectM.textSize=18; 
+            objectM.textSize=18;
+            del.textSize=18;
         } else if (mode==0) {
             edit.textSize=18;
             objectM.textSize=24;
+            del.textSize=18;
+        } else if (mode==2) {
+            edit.textSize=18;
+            objectM.textSize=18;
+            del.textSize=24;
         }
 
         if (debug==true) {

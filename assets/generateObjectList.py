@@ -21,7 +21,7 @@ for m in d:
     if (i==29):
         ysize+=35
         i=0
-        xsize=35*6
+        xsize=35
     xsize+=35
     obj+=1
     i+=1
@@ -33,7 +33,7 @@ for a in im_int:
 
 total=0
 
-new_im = Image.new('RGBA', (xsize,ysize))
+new_im = Image.new('RGBA', (1015,ysize))
 i=0
 xpos = 0
 ypos = 0

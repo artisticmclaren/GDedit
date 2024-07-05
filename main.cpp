@@ -56,6 +56,11 @@ struct color {
             this->blending=blending;
             this->opacity=opacity;
         }
+
+        sf::Color convertToSFColor() {
+            sf::Color output(red,green,blue,opacity);
+            return output;
+        }
 };
 
 // default color init

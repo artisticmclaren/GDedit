@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <cmath>
+#include <regex>
 
 #include "textures.cpp"
 #include "ui.cpp"
@@ -42,11 +43,11 @@ struct color {
         float opacity;
 
         color() {
-            this->red=255;
-            this->blue=255;
-            this->green=255;
-            this->blending=0;
-            this->opacity=1;
+            this->red=255; // 1
+            this->green=255; // 2
+            this->blue==255; // 3
+            this->blending=0; // 5
+            this->opacity=1; // 7
         }
 
         color(int red, int green, int blue, int blending, float opacity) {
@@ -58,21 +59,76 @@ struct color {
         }
 
         sf::Color convertToSFColor() {
-            sf::Color output(red,green,blue,opacity);
+            sf::Color output(red,green,blue,255*opacity);
             return output;
         }
+
+        std::string toColorString(int channelID) {
+            std::string output="";
+            output.append("6_").append(std::to_string(channelID)).append("_");;
+            output.append("1_").append(std::to_string(red)).append("_");
+            output.append("2_").append(std::to_string(green)).append("_");
+            output.append("3_").append(std::to_string(blue)).append("_");
+            output.append("5_").append(std::to_string(blending)).append("_");
+            output.append("7_").append(std::to_string(opacity)).append("_");;
+            output.append("11_255_12_255_13_255");
+            output.append("|");
+            return output;
+        }
+
+        void setTo(int r, int g, int b,int blending, float opacity) {
+            red = r;
+            green = g;
+            blue = b;
+            blending = blending;
+            opacity = opacity;
+        }
+
+        
 };
 
-// default color init
-color BG(40,125,255,0,255);
-color G1(0,102,255,0,255);
-color LINE(255,255,255,0,255);
-color TDL(255,255,255,1,255);
-color OBJ(255,255,255,0,255);
-color G2(0,102,255,0,255);
-color BLACK(0,0,0,0,255);
+// color init
+color colors[999];
 
-sf::Sprite getSprite(int id, int x, int y, float rot, float z, bool isBeingEdited,int cLayer,int layer)
+color BG(255,0,0,0,1);
+color G1(0,102,255,0,1);
+color LINE(255,255,255,0,1);
+color TDL(255,255,255,1,1);
+color OBJ(255,255,255,0,1);
+color G2(0,102,255,0,1);
+color BLACK(0,0,0,0,1);
+
+color getColor(int channelID,color colors[999]) {
+    switch (channelID)
+    {
+    case 1000:
+        return BG;
+        break;
+    case 1001:
+        return G1;
+        break;
+    case 1002:
+        return LINE;
+        break;
+    case 1003:
+        return TDL;
+        break;
+    case 1004:
+        return OBJ;
+        break;
+    case 1009:
+        return G2;
+        break;
+    case 1010:
+        return BLACK;
+        break;
+    default:
+        return colors[channelID-1];
+        break;
+    }
+}
+
+sf::Sprite getSprite(int id, int x, int y, float rot, float z, bool isBeingEdited,int cLayer,int layer,int colorID)
 {
     sf::Sprite output;
     output.rotate(rot);
@@ -98,46 +154,18 @@ sf::Sprite getSprite(int id, int x, int y, float rot, float z, bool isBeingEdite
     sf::Transformable newTransform = setOriginAndReadjust(transform,sf::Vector2f(textures[id].getSize().x/2,textures[id].getSize().y/2));
     output.setPosition(newTransform.getPosition());
     output.setOrigin(newTransform.getOrigin());
+    output.setColor(sf::Color(255,255,255,255));
     if (cLayer>-1) {
         if (layer!=cLayer) {
-            output.setColor(sf::Color(OBJ.red,OBJ.green,OBJ.blue,100));
+            output.setColor(sf::Color(getColor(colorID,colors).red,getColor(colorID,colors).green,getColor(colorID,colors).blue,100));
         }
     }
 
-    return output;
-}
-
-color getColor(int channelID,color colors[999]) {
-    switch (channelID)
-    {
-        case 1000:
-            return BG;
-            break;
-        case 1001:
-            return G1;
-            break;
-        case 1002:
-            return LINE;
-            break;
-        case 1003:
-            return TDL;
-            break;
-        case 1004:
-            return OBJ;
-            break;
-        case 1009:
-            return G2;
-            break;
-        case 1010:
-            return BLACK;
-            break;
-        default: // likely custom color
-            if (channelID<1000 && channelID>0) {
-                return colors[channelID-1];
-            } else {
-                return BG;
-            }
+    if (isBeingEdited) {
+        output.setColor(sf::Color(0,255,0,output.getColor().a));
     }
+
+    return output;
 }
 
 struct block
@@ -173,6 +201,22 @@ struct block
         this->durration = nb.durration;
     }
 };
+
+struct colorPage {
+    public:
+        int idOffset;
+        color colors[20];
+};
+
+colorPage getPage(int pageNumber) {
+    colorPage output;
+    int offset = 20*pageNumber;
+    for (int o; o<20;o++) {
+        output.colors[o] = colors[o+offset];
+    }
+    output.idOffset = offset;
+    return output;
+}
 
 bool paused = false;
 bool exploring = false;
@@ -215,11 +259,37 @@ int cLayer=0;
 bool saveLevel(std::string levelName, block blocks[80000])
 {
     std::ofstream save(std::string("saves/").append(levelName));
+    std::ofstream colorsave(std::string("saves/color_").append(levelName));
     std::ofstream save_gd(std::string("saves/").append(levelName).append(".gmd"));
     std::string l_data = "";
     std::string ld_gd = "<?xml version='1.0'?><plist version='1.0' gjver='2.0'><dict><k>kCEK</k><i>4</i><k>k2</k><s>";
+    std::string gde_cd="";
     ld_gd.append(levelName);
-    ld_gd.append("</s><k>k4</k><s>b'kS38,1_40_2_125_3_255_11_255_12_255_13_255_4_-1_6_1000_7_1_15_1_18_0_8_1|1_0_2_102_3_255_11_255_12_255_13_255_4_-1_6_1001_7_1_15_1_18_0_8_1|1_0_2_102_3_255_11_255_12_255_13_255_4_-1_6_1009_7_1_15_1_18_0_8_1|1_255_2_255_3_255_11_255_12_255_13_255_4_-1_6_1002_5_1_7_1_15_1_18_0_8_1|1_40_2_125_3_255_11_255_12_255_13_255_4_-1_6_1013_7_1_15_1_18_0_8_1|1_40_2_125_3_255_11_255_12_255_13_255_4_-1_6_1014_7_1_15_1_18_0_8_1|1_125_2_255_3_0_11_255_12_255_13_255_4_-1_6_1005_5_1_7_1_15_1_18_0_8_1|1_0_2_255_3_255_11_255_12_255_13_255_4_-1_6_1006_5_1_7_1_15_1_18_0_8_1|1_255_2_255_3_255_11_255_12_255_13_255_4_-1_6_1004_7_1_15_1_18_0_8_1|,kA13,0,kA15,0,kA16,0,kA14,,kA6,0,kA7,0,kA25,0,kA17,0,kA18,0,kS39,0,kA2,0,kA3,0,kA8,0,kA4,0,kA9,0,kA10,0,kA22,0,kA23,0,kA24,0,kA27,1,kA40,1,kA41,1,kA42,1,kA28,0,kA29,0,kA31,1,kA32,1,kA36,0,kA43,0,kA44,0,kA45,1,kA33,1,kA34,1,kA35,0,kA37,1,kA38,1,kA39,1,kA19,0,kA26,0,kA20,0,kA21,0,kA11,0;");
+
+    std::string cs=std::string("");
+    cs.append(BG.toColorString(1000));
+    cs.append(G1.toColorString(1001));
+    cs.append(G2.toColorString(1009));
+    cs.append(TDL.toColorString(1003));
+    cs.append(LINE.toColorString(1002));
+    cs.append(OBJ.toColorString(1004));
+    cs.append(BLACK.toColorString(1010));
+
+
+    for (int c = 0; c<999;c++) {
+        if (colors[c].red!=255 && colors[c].green!=255 && colors[c].blue!=255) {
+            std::cout << "id: " << c << " r: " << colors[c].red << " g: " << colors[c].green << " b: " << colors[c].blue << std::endl;
+            cs.append(colors[c].toColorString(c+1));
+        }
+    }
+
+    ld_gd.append("</s><k>k4</k><s>kS38,");
+    ld_gd.append(cs);
+    std::replace(cs.begin(),cs.end(),'|',' ');
+    cs = std::regex_replace(cs,std::regex(" ")," n ");
+    std::replace(cs.begin(),cs.end(),'_',' ');
+    colorsave << cs;
+    ld_gd.append(",kA13,0,kA15,0,kA16,0,kA14,,kA6,0,kA7,0,kA25,0,kA17,0,kA18,0,kS39,0,kA2,0,kA3,0,kA8,0,kA4,0,kA9,0,kA10,0,kA22,0,kA23,0,kA24,0,kA27,1,kA40,1,kA41,1,kA42,1,kA28,0,kA29,0,kA31,1,kA32,1,kA36,0,kA43,0,kA44,0,kA45,1,kA33,1,kA34,1,kA35,0,kA37,1,kA38,1,kA39,1,kA19,0,kA26,0,kA20,0,kA21,0,kA11,0;");
 
 	if (std::filesystem::is_directory(std::string("saves"))==false) {
 		reason=std::string("directory 'saves' does not exist.");
@@ -240,7 +310,9 @@ bool saveLevel(std::string levelName, block blocks[80000])
             std::string x = std::to_string(blocks[b].x).append(" 3 ");
             std::string y = std::to_string(blocks[b].y).append(" 6 ");
             std::string r = std::to_string(blocks[b].rotation).append(" 20 ");
-            std::string l =std::to_string(blocks[b].layer);
+            std::string l =std::to_string(blocks[b].layer).append(" 21 ");
+            std::string mc = std::to_string(blocks[b].mainColor).append(" 22 ");
+            std::string sc = std::to_string(blocks[b].secondaryColor);
 
             // for gd
             std::string gy="15";
@@ -257,9 +329,11 @@ bool saveLevel(std::string levelName, block blocks[80000])
             std::string gblue = std::to_string(blocks[b].blue);
             std::string ggreen = std::to_string(blocks[b].green);
             std::string gdur = std::to_string(blocks[b].durration);
+            std::string gmc = std::to_string(blocks[b].mainColor);
+            std::string gsc = std::to_string(blocks[b].secondaryColor);
 
-            all.append(id).append(x).append(y).append(r).append(l);
-            gd_all.append("1,").append(gid).append(",2,").append(gx).append(",3,").append(gy).append(",6,").append(gr).append(",20,").append(gl);
+            all.append(id).append(x).append(y).append(r).append(l).append(mc).append(sc);
+            gd_all.append("1,").append(gid).append(",2,").append(gx).append(",3,").append(gy).append(",6,").append(gr).append(",20,").append(gl).append(",21,").append(gmc).append(",22,").append(gsc);
             if (r_id==28 || r_id==29) {
                 gd_all.append(",7,").append(gred).append(",8,").append(ggreen).append(",9,").append(gblue).append(",10,").append(gdur);
                 all.append(std::string(" 7 ").append(gred)).append(" ");
@@ -298,28 +372,34 @@ int totalPlaced=0;
 bool LoadSave(std::string levelName,block blocks[80000]) {
     std::filesystem::path pcwd = std::filesystem::current_path();
     std::string saveFile(pcwd.u8string());
+    std::string csaveFile(pcwd.u8string());
     saveFile.append("/saves/").append(levelName);
+    csaveFile.append("/saves/color_").append(levelName);
     ifstream save(saveFile);
+    ifstream csave(csaveFile);
     std::stringstream buf;
+    std::stringstream cbuf;
     buf << save.rdbuf();
+    cbuf << csave.rdbuf();
     std::string saveString = buf.str();
+    std::string csaveString = cbuf.str();
     std::vector<std::string> lines;
     objectCount=0;
+    block empty;
     for (int b=0;b<totalPlaced;b++) { // clear current level (if there is anything)
-        blocks[b].id=0;
-        blocks[b].x=0;
-        blocks[b].y=0;
-        blocks[b].layer=0;
-        blocks[b].rotation=0;
+        blocks[b].setEqual(empty);
     }
 
     totalPlaced=0;
 
     std::stringstream ss(saveString);
+    std::stringstream css(csaveString);
     std::istream_iterator<std::string> begin(ss);
     std::istream_iterator<std::string> end;
+    std::istream_iterator<std::string> cbegin(css);
+    std::istream_iterator<std::string> cend;
     std::vector<std::string> data(begin,end);
-
+    std::vector<std::string> cdata(cbegin,cend);
     int totalBlocks = 0;
     block nb;
     for (int i=0;i<data.size(); i++) { // has to be a better way of doing this
@@ -361,7 +441,54 @@ bool LoadSave(std::string levelName,block blocks[80000]) {
         }
     }
 
+    int curColorID=-1;
+    for (int i = 0; i<cdata.size();i++) {
+
+        if (curColorID==-1) {
+            curColorID=stoi(cdata[i+1]);
+            i++;
+        }
+        if (cdata[i]=="1") {
+            if (curColorID>1000) {
+                continue;
+            }
+            colors[curColorID].red = stoi(cdata[i+1]);
+            i++;
+        } else if (cdata[i]=="2") {
+            if (curColorID>1000) {
+                continue;
+            }
+            colors[curColorID].green = stoi(cdata[i+1]);
+            i++;
+        } else if (cdata[i]=="3") {
+            if (curColorID>1000) {
+                continue;
+            }
+            colors[curColorID].blue = stoi(cdata[i+1]);
+            i++;
+        } else if (cdata[i]=="5") {
+            if (curColorID>1000) {
+                continue;
+            }
+            colors[curColorID].blending = stoi(cdata[i+1]);
+            i++;
+        } else if (cdata[i]=="n") {
+            i++;
+            std::cout << " r: " << colors[curColorID].red << " g: " << colors[curColorID].green << " b: " << colors[curColorID].blue << " o: " << colors[curColorID].opacity << std::endl;
+            curColorID=-1;
+        }
+    }
+
+    BG = colors[1000];
+    G1 = colors[1001];
+    LINE = colors[1002];
+    TDL = colors[1003];
+    OBJ = colors[1004];
+    G2 = colors[1009];
+    BLACK = colors[1010];
+
     save.close();
+    csave.close();
     return true;
 }
 
@@ -496,6 +623,21 @@ int main()
     std::string currInput;
     int currInputID=-1;
 
+    // initialize colors
+    for (int c = 0; c<999;c++) {
+        colors[c].red = 255;
+        colors[c].green = 255;
+        colors[c].blue = 255;
+    }
+
+    BG.setTo(40,125,255,0,1);
+    G1.setTo(0,102,255,0,1);
+    G2.setTo(0,102,255,0,1);
+    TDL.setTo(255,255,255,0,1);
+    LINE.setTo(255,255,255,1,1);
+    OBJ.setTo(255,255,255,0,1);
+    BLACK.setTo(0,0,0,0,1);
+
     objSelectTex.loadFromFile("assets/objects.png");
     objSelect.setTexture(objSelectTex);
     objSelect.setPosition(135,30);
@@ -504,16 +646,16 @@ int main()
     ground.setTexture(groundTex);
     ground.setPosition(0,680);
 
-    ground.setColor(sf::Color(G1.red, G1.green, G1.blue, G1.opacity));
+    ground.setColor(G1.convertToSFColor());
     ground2.setTexture(groundTex);
     ground2.setPosition(512,680);
-    ground2.setColor(sf::Color(G1.red, G1.green, G1.blue, G1.opacity));
+    ground2.setColor(G1.convertToSFColor());
     ground3.setTexture(groundTex);
     ground3.setPosition(1024,680);
-    ground3.setColor(sf::Color(G1.red, G1.green, G1.blue, G1.opacity));
+    ground3.setColor(G1.convertToSFColor());
     ground4.setPosition(1536,680);
     ground4.setTexture(groundTex);
-    ground4.setColor(sf::Color(G1.red, G1.green, G1.blue, G1.opacity));
+    ground4.setColor(G1.convertToSFColor());
 
     int groundlc=0;
 
@@ -583,8 +725,8 @@ int main()
     preview.setRotation(rotation);
 
     block blocks[80000];
-    color colors[999];
 
+    int bid=0;
     for (int b = 0; b < 80000; b++)
     {
         blocks[b].id = 0;
@@ -709,10 +851,6 @@ int main()
                 {
                     paused=!paused;
                 }
-                if (event.key.code == sf::Keyboard::Key::S)
-                {
-                    saveLevel("test", blocks);
-                }
                 if (event.key.code==sf::Keyboard::Key::Q) {
                     rotation-=90;
                     preview.setRotation(rotation);
@@ -774,7 +912,7 @@ int main()
             cameraPosition.y = cpOnClick.y + (cmp.y - oldmp.y);
         }
 
-        window.clear(sf::Color(BG.red,BG.green,BG.blue,BG.opacity));
+        window.clear(BG.convertToSFColor());
 
         window.draw(objectC.drawButton());
         window.draw(editObjectBtn.drawButton());
@@ -800,7 +938,7 @@ int main()
             } else {
                 edited=false;
             }
-            window.draw(getSprite(blocks[b].id, blocks[b].x + cameraPosition.x, blocks[b].y + cameraPosition.y, blocks[b].rotation, zoom,edited,cLayer,blocks[b].layer));
+            window.draw(getSprite(blocks[b].id, blocks[b].x + cameraPosition.x, blocks[b].y + cameraPosition.y, blocks[b].rotation, zoom,edited,cLayer,blocks[b].layer,blocks[b].mainColor));
             rendered++;
         }
 

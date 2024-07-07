@@ -19,6 +19,6 @@ X better start position menu
 X geode integration
 X fix the stupid area triggers
 X fix robtops ui in general
-✓ gdshare integration
+- gdshare integration (can save but not load gdshare files)
 X key bindings
 X better build helper

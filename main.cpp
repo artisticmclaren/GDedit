@@ -45,7 +45,7 @@ struct color {
         color() {
             this->red=255; // 1
             this->green=255; // 2
-            this->blue==255; // 3
+            this->blue=255; // 3
             this->blending=0; // 5
             this->opacity=1; // 7
         }
@@ -205,15 +205,11 @@ struct block
 struct colorPage {
     public:
         int idOffset;
-        color colors[20];
 };
 
 colorPage getPage(int pageNumber) {
     colorPage output;
-    int offset = 20*pageNumber;
-    for (int o; o<20;o++) {
-        output.colors[o] = colors[o+offset];
-    }
+    int offset = 60*(pageNumber-1);
     output.idOffset = offset;
     return output;
 }
@@ -223,6 +219,9 @@ bool exploring = false;
 bool debug=false;
 
 int objectCount = 0;
+int currEditedColor = -1;
+
+sf::Vector2i lastRounded; // last frames rounded position
 
 sf::Vector2i roundPositions(sf::Vector2i pos)
 {
@@ -233,7 +232,7 @@ sf::Vector2i roundPositions(sf::Vector2i pos)
 
     if (xr == 0)
     {
-        output.x = xr;
+        output.x = pos.x;
     }
     else
     {
@@ -531,6 +530,8 @@ void placeObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, int no
     mpcp.y = mousePosition.y - cameraPosition.y;
 
     sf::Vector2i rounded = roundPositions(mpcp);
+    if (lastRounded==rounded) { return; }
+    lastRounded = rounded;
     if (mpcp.x<0) rounded.x-=30;
     if (mpcp.y<0) rounded.y-=30;
     blocks[totalPlaced].id = nobjid;
@@ -591,6 +592,8 @@ bool shiftClicked=false;
 bool loading=false;
 bool levelLoaded=false;
 bool editingObject=false;
+bool holding=false;
+
 std::string levelName="null";
 
 
@@ -738,6 +741,8 @@ int main()
 
     int rendered = 0;
 
+
+    sf::Clock deltaClock;
     while (window.isOpen())
     {
         sf::Event event;
@@ -775,6 +780,7 @@ int main()
                 if (event.mouseButton.button == sf::Mouse::Button::Left)
                 {
                     clicked=true;
+                    holding=true;
                     bool clickedButton=false;
 
                     if (objectM.isMouseInside(mousePosition)) {
@@ -826,9 +832,14 @@ int main()
                     }
                 }
             }
-            if (event.type == sf::Event::MouseButtonReleased && event.mouseButton.button == sf::Mouse::Button::Right)
+            if (event.type == sf::Event::MouseButtonReleased)
             {
-                dragging = false;
+                if (event.mouseButton.button == sf::Mouse::Button::Right) {
+                    dragging = false;
+                }
+                if (event.mouseButton.button==sf::Mouse::Button::Left) {
+                    holding=false;
+                }
             }
 
             if (currInputID>-1) {
@@ -852,12 +863,20 @@ int main()
                     paused=!paused;
                 }
                 if (event.key.code==sf::Keyboard::Key::Q) {
-                    rotation-=90;
-                    preview.setRotation(rotation);
+                    if (editSelected>-1) {
+                        blocks[editSelected].rotation-=90;
+                    } else {
+                        rotation-=90;
+                        preview.setRotation(rotation);
+                    }
                 }
                 if (event.key.code==sf::Keyboard::Key::E) {
-                    rotation+=90;
-                    preview.setRotation(rotation);
+                    if (editSelected>-1) {
+                        blocks[editSelected].rotation+=90;
+                    } else {
+                        rotation+=90;
+                        preview.setRotation(rotation);
+                    }
                 }
                 if (event.key.code==sf::Keyboard::Key::O) {
                     exploring=!exploring;
@@ -867,12 +886,14 @@ int main()
                 }
                 if (event.key.code==sf::Keyboard::Key::Num1) {
                     mode=0;
+                    editSelected=-1;
                 }
                 if (event.key.code==sf::Keyboard::Key::Num2) {
                     mode=1;
                 }
                 if (event.key.code==sf::Keyboard::Key::Num3) {
                     mode=2;
+                    editSelected=-1;
                 }
                 if (event.key.code==sf::Keyboard::Left) {
                     if (cLayer>-1) {
@@ -920,6 +941,14 @@ int main()
         window.draw(preview);
         line.setPosition(cameraPosition.x,0);
 
+        if (holding && !paused && !exploring && !editingObject && editSelected<0 && mode==0) {
+            placeObject(mousePosition,cameraPosition,nobjid,rotation,cLayer,blocks);
+        }
+
+        if (holding && !paused && !exploring && !editingObject && editSelected<0 && mode==2) {
+            deleteObjectWMP(blocks,mousePosition,cameraPosition);
+        }
+
         sf::FloatRect visibleArea(
             0 - 30,
             0 - 30,
@@ -945,7 +974,7 @@ int main()
         if ((0+(512*groundlc)+cameraPosition.x)+512<0) {
             groundlc+=1;
         }
-        if ((1536+(512*groundlc)+cameraPosition.x)-512>720) {
+        if ((1536+(512*groundlc)+cameraPosition.x)-552>720) {
             groundlc-=1;
         }
 
@@ -1101,6 +1130,42 @@ int main()
                 if (currInputID>-1 && currInputID==rgb.id) {
                     rgb.value = currInput;
                 }
+            } else {
+                colorPage page = getPage(1);
+                ColorChannel channels[60];
+                int bc = 0;
+                int y = 55;
+                for (int c=0;c<60;c++) {
+                    ColorChannel nchannel(185+(47*bc),y,0.25,0.25,255,std::to_string((c+page.idOffset)+1),16,colors[c+page.idOffset].convertToSFColor());
+                    channels[c] = nchannel;
+                    if (bc==19) {
+                        bc=-1;
+                        y+=55;
+                    }
+                    bc++;
+                }
+
+                for (int c=0;c<60;c++) {
+                    window.draw(channels[c].drawButton());
+                    window.draw(channels[c].drawText());
+                }
+
+
+                if (currEditedColor>-1) {
+                    RGBColorPicker colorpicker(800,500,0.85,colors[currEditedColor].convertToSFColor());
+                    window.draw(colorpicker.drawBG());
+                    window.draw(colorpicker.drawPreview());
+                }
+
+                if (clicked) {
+                    for (int c=0;c<60;c++) {
+                        if (channels[c].isMouseInside(mousePosition)) {
+                            blocks[editSelected].mainColor = c+page.idOffset;
+                            blocks[editSelected].secondaryColor = c+page.idOffset;
+                            currEditedColor = c+page.idOffset;
+                        }
+                    }
+                }
             }
 
             Button close(640,670,0.7,0.25,255,"Close",18);
@@ -1111,6 +1176,7 @@ int main()
             if (clicked) {
                 if (close.isMouseInside(mousePosition)) {
                     editingObject=false;
+                    currEditedColor=-1;
                 }
             }
         }

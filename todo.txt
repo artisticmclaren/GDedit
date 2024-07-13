@@ -1,21 +1,13 @@
-X fix garbage offset in copy paste
-X quater space / 8th space
-X better stretching in warp
-✓ swipe to place / delete
-X zooming (zoom into mouse position mainly)
-X undo / redo
-X better paste value system
-X copy / paste values from guide to zoom / offset
-X no scale limit
-X search by update / object type in object mneu
-X upload level directly from editor
-X playtesting
-X spwn integration
-X enter values into textbox (robtop please man)
-X better start position menu
-X geode integration
-X fix the stupid area triggers
-✓ gdshare integration
-✓ color channels
-X key bindings
-X better build helper
+quater space / 8th space
+zooming (zoom into mouse position mainly)
+better paste value system
+copy / paste values from guide to zoom / offset
+no scale limit
+search by update / object type in object menu
+playtesting
+spwn integration
+enter values into textbox
+better start position menu
+fix the stupid area trigger ui
+key bindings
+better build helper

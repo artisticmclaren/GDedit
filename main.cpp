@@ -16,6 +16,7 @@ using namespace std;
 
 std::string debugText="";
 int d_msg=0;
+float zoom = 1;
 
 void LogDebug(std::string msg) {
     if (d_msg==32) {
@@ -225,8 +226,8 @@ sf::Vector2i lastRounded; // last frames rounded position
 
 sf::Vector2i roundPositions(sf::Vector2i pos)
 {
-    int xr = pos.x % 30;
-    int yr = pos.y % 30;
+    int xr = pos.x % 30*zoom;
+    int yr = pos.y % 30*zoom;
 
     sf::Vector2i output;
 
@@ -295,6 +296,8 @@ bool saveLevel(std::string levelName, block blocks[80000])
         LogDebug("[ERROR] Directory 'saves' does not exist.");
 		return false;
 	}
+
+    bool blockWasUndone = false;
 
     for (int b = 0; b < 80000; b++)
     {
@@ -567,6 +570,29 @@ int pickObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, block bl
     return -1;
 }
 
+int undoDepth=0;
+
+void undoLastPlacement(block blocks[80000],block undoHistory[1000]) {
+    undoHistory[undoDepth].setEqual(blocks[totalPlaced]);
+    if (undoDepth<999) { undoDepth++; }
+    else { undoDepth=0; }
+    blocks[totalPlaced].id = 0;
+    blocks[totalPlaced].x = 0;
+    blocks[totalPlaced].y = 0;
+    blocks[totalPlaced].rotation = 0;
+    blocks[totalPlaced].layer = 0;
+    totalPlaced--;
+}
+
+void redoFromUndoHistory(block blocks[80000],block undoHistory[1000]) {
+    block lastUndo = undoHistory[undoDepth];
+    totalPlaced++;
+    blocks[totalPlaced].setEqual(lastUndo);
+    block def;
+    undoHistory[undoDepth].setEqual(def);
+    undoDepth--;
+}
+
 void editObject(sf::Vector2i mousePosition, sf::Vector2i cameraPosition, block blocks[80000]) {
     sf::Vector2i mpcp;
     mpcp.x = mousePosition.x - cameraPosition.x;
@@ -708,16 +734,12 @@ int main()
     Canvas exploreBG(1280/2-(256*4)/2,10,4,2.75,200);
 
     sf::Vector2i cameraPosition;
-    sf::Vector2i mousePosition;
-
-    // camera
+    sf::Vector2i mousePosition;    // camera
     sf::Vector2i oldmp;
     sf::Vector2i cpOnClick;
     bool dragging = false;
-    float zoom = 1;
     float rotation=0;
     int nobjid = 1;
-
 
     sf::Sprite preview;
     
@@ -728,6 +750,7 @@ int main()
     preview.setRotation(rotation);
 
     block blocks[80000];
+    block undoHistory[1000];
 
     int bid=0;
     for (int b = 0; b < 80000; b++)
@@ -737,6 +760,14 @@ int main()
         blocks[b].y = 0;
         blocks[b].rotation=0;
         blocks[b].layer=0;
+
+        if (b<999) {
+            undoHistory[b].id = 0;
+            undoHistory[b].x = 0;
+            undoHistory[b].y = 0;
+            undoHistory[b].rotation = 0;
+            undoHistory[b].layer = 0;
+        }
     }
 
     int rendered = 0;
@@ -842,6 +873,14 @@ int main()
                 }
             }
 
+            if (event.type == sf::Event::MouseWheelMoved) {
+                if (event.mouseWheel.delta<0) {
+                    // zoom-=0.1;
+                } else {
+                    // zoom+=0.1;
+                }
+            }
+
             if (currInputID>-1) {
                 if (event.type==sf::Event::TextEntered) {
                     currInput+=event.text.unicode;
@@ -922,6 +961,13 @@ int main()
                     if (editSelected>-1) {
                         blocks[editSelected].y+=30;
                     }
+                }
+                if (event.key.control && event.key.code==sf::Keyboard::Z) { // undo last placement
+                    undoLastPlacement(blocks,undoHistory);
+                }
+
+                if (event.key.control && event.key.code==sf::Keyboard::Y) {
+                    redoFromUndoHistory(blocks,undoHistory);
                 }
             }
         }

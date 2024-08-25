@@ -8,13 +8,14 @@
 #include <string.h>
 #include <iostream>
 #include <vector>
+#include <array>
 
-std::array roundPositions(sf::array pos)
+std::array<int,2> roundPositions(std::array<int,2> pos)
 {
-    int xr = pos[0] % 30*zoom;
-    int yr = pos[1] % 30*zoom;
+    int xr = pos[0] % 30;
+    int yr = pos[1] % 30;
 
-	std::array output;
+	std::array<int,2> output;
 
     if (xr == 0)
     {
@@ -85,7 +86,7 @@ struct block
     float rotation; // 6
     int mainColor = 1004; // 21
     int secondaryColor = 1004; // 22
-    
+
     // ALL TRIGGERS //
     int touchTriggered=0;
 
@@ -147,9 +148,14 @@ int nobjid=1;
 
 int main() {
 	InitWindow(1280,720,"GDedit");
-	initializeTextures();
 	SetTargetFPS(60);
 	Font main=LoadFontEx("assets/fonts/roboto.ttf",18,0,256);
+
+	// Show loading screen while initializing textures
+    initializeTextures();
+
+    // Clear the loading screen
+    ClearBackground({40, 125, 255});
 
 	while (!WindowShouldClose()) {
 		ClearBackground({40,125,255});

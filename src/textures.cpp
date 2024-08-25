@@ -10,6 +10,15 @@ struct objData {
 	Texture2D tex;
 };
 
+void DrawLoadingScreen(int loadedTextures,int totalTextures)
+{
+    BeginDrawing();
+    ClearBackground(BLACK);
+    DrawText("Loading Textures...", GetScreenWidth()/2 - MeasureText("Loading Textures...", 20)/2, GetScreenHeight()/2 - 10, 20, WHITE);
+    DrawText(TextFormat("%d/%d",loadedTextures,totalTextures), GetScreenWidth()/2 - MeasureText(TextFormat("%d/%d",loadedTextures,totalTextures), 20)/2, GetScreenHeight()/2 + 25, 20, WHITE);
+    EndDrawing();
+}
+
 bool compareById(const objData &a, const objData &b) { return a.id < b.id; }
 
 const int texCount=177;
@@ -32,6 +41,7 @@ int initializeTextures() {
         obj_data[i].id = id;
         obj_data[i].tex = tex;
         i++;
+        DrawLoadingScreen(i,texCount);
     }
     std::sort(obj_data,obj_data+texCount,compareById);
     for (int i=0; i<texCount; i++) { textures[i] = obj_data[i].tex; }

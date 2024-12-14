@@ -41,7 +41,7 @@ int initializeTextures() {
         obj_data[i].id = id;
         obj_data[i].tex = tex;
         i++;
-        DrawLoadingScreen(i,texCount);
+        // DrawLoadingScreen(i,texCount); // sucks for now, might readd later
     }
     std::sort(obj_data,obj_data+texCount,compareById);
     for (int i=0; i<texCount; i++) { textures[i] = obj_data[i].tex; }

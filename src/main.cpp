@@ -1,7 +1,6 @@
 #define RAYGUI_IMPLEMENTATION
 
 #include <raylib.h>
-#include "raygui.h"
 #include "textures.cpp"
 #include <stdio.h>
 #include <stdlib.h>
@@ -163,9 +162,9 @@ int main() {
 		BeginDrawing();
 		mousePosition[0]=GetMouseX();
 		mousePosition[1]=GetMouseY();
-		DrawTextEx(main,TextFormat("mpos: %d, %d\ncurrent obj id:%d",mousePosition[0],mousePosition[1],nobjid),{0,0},18,2,WHITE);
+		DrawTextEx(main,TextFormat("mpos: %d, %d\ncurrent obj id:%d\nobj count: %d",mousePosition[0],mousePosition[1],nobjid,),{0,0},18,2,WHITE);
 		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-			block nb(1,mousePosition[0],mousePosition[1],0,0,1004,1004);
+			block nb(nobjid,mousePosition[0],mousePosition[1],0,0,1004,1004);
 			blocks.push_back(nb);
 		}
 		if (nobjid<texCount) {
@@ -173,7 +172,11 @@ int main() {
 		} else {
 			nobjid=1;
 		}
-		DrawTexturePro(textures[nobjid],{0,0,textures[nobjid].width,textures[nobjid].height},{mousePosition[0],mousePosition[1],textures[nobjid].width*0.6,textures[nobjid].height*0.6},{textures[nobjid].width*0.6/2,textures[nobjid].height*0.6/2},mousePosition[0]-mousePosition[1],WHITE);
+
+        for (int b=0;b<blocks.size();b++) {
+            DrawTexturePro(textures[blocks[b].id],{0,0,textures[blocks[b].id].width,textures[blocks[b].id].height},{blocks[b].x,blocks[b].y,textures[blocks[b].id].width*0.6,textures[blocks[b].id].height*0.6},{textures[blocks[b].id].width*0.6/2,textures[blocks[b].id].height*0.6/2},blocks[b].rotation,WHITE);
+        }
+
 		EndDrawing();
 	}
 

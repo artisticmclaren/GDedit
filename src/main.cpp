@@ -2,6 +2,7 @@
 
 #include <raylib.h>
 #include "textures.cpp"
+#include "raygui.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,30 +12,10 @@
 
 std::array<int,2> roundPositions(std::array<int,2> pos)
 {
-    int xr = pos[0] % 30;
-    int yr = pos[1] % 30;
-
-	std::array<int,2> output;
-
-    if (xr == 0)
-    {
-        output[0] = pos[0];
-    }
-    else
-    {
-        output[0] = pos[0] - xr;
-    }
-
-    if (yr == 0)
-    {
-        output[1] = pos[1];
-    }
-    else
-    {
-        output[1] = pos[1] - yr;
-    }
-
-    return output;
+    int xr = (pos[0]/30)*30;
+    int yr = (pos[1]/30)*30;
+    std::array<int,2> result = {xr,yr};
+    return result;
 }
 
 struct color {
@@ -142,8 +123,12 @@ struct block
 std::vector<block> blocks;
 color colors[1010];
 
-int mousePosition[2] = {0,0};
+std::array<int,2> mousePosition = {0,0};
 int nobjid=1;
+
+float mwheel=0;
+bool pressedButton;
+
 
 int main() {
 	InitWindow(1280,720,"GDedit");
@@ -162,25 +147,33 @@ int main() {
 		BeginDrawing();
 		mousePosition[0]=GetMouseX();
 		mousePosition[1]=GetMouseY();
-		DrawTextEx(main,TextFormat("mpos: %d, %d\ncurrent obj id:%d\nobj count: %d",mousePosition[0],mousePosition[1],nobjid,),{0,0},18,2,WHITE);
-		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-			block nb(nobjid,mousePosition[0],mousePosition[1],0,0,1004,1004);
-			blocks.push_back(nb);
-		}
-		if (nobjid<texCount) {
-			nobjid++;
-		} else {
-			nobjid=1;
-		}
+
+        mwheel=GetMouseWheelMoveV().y;
+        nobjid+=mwheel;
+
+        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+            std::array<int,2> rp = roundPositions(mousePosition);
+            
+            block nb(nobjid,rp[0]+15,rp[1]+15,0,0,1004,1004);
+            blocks.push_back(nb);
+        }
+
 
         for (int b=0;b<blocks.size();b++) {
             DrawTexturePro(textures[blocks[b].id],{0,0,textures[blocks[b].id].width,textures[blocks[b].id].height},{blocks[b].x,blocks[b].y,textures[blocks[b].id].width*0.6,textures[blocks[b].id].height*0.6},{textures[blocks[b].id].width*0.6/2,textures[blocks[b].id].height*0.6/2},blocks[b].rotation,WHITE);
         }
 
+        DrawTextEx(main,TextFormat("mpos: %d, %d\ncurrent obj id:%d\nobj count: %d",mousePosition[0],mousePosition[1],nobjid,blocks.size()),{0,0},18,2,WHITE);
+
 		EndDrawing();
+        pressedButton=false;
 	}
 
+    std::cout << "Unloading resources...\n";
+
 	UnloadFont(main);
+    deinitializeTextures();
 	CloseWindow();
-	return 0;
+
+    return 0;
 }

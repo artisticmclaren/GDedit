@@ -47,3 +47,13 @@ int initializeTextures() {
     for (int i=0; i<texCount; i++) { textures[i] = obj_data[i].tex; }
     return 0;
 }
+
+int deinitializeTextures() {
+    std::cout << "Started unload textures...\n";
+    for (int i=0;i<texCount;i++) {
+        UnloadTexture(textures[i]);
+    }
+    std::cout << "Finished manual unloading of textures.\n";
+
+    return 0;
+}
